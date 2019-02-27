@@ -4,3 +4,4 @@ terrain/**
 *.dot
 *.svg
 *.png
+*.pyc
