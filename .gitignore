@@ -1,0 +1,6 @@
+logs/**
+terrain/**
+*.bin
+*.dot
+*.svg
+*.png
