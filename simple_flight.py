@@ -11,45 +11,52 @@ connection_string = 'tcp:127.0.0.1:5760'
 print("Connecting to vehicle on: %s" % (connection_string,))
 vehicle = connect(connection_string, wait_ready=True)
 
-# set the frame class http://ardupilot.org/copter/docs/parameters.html
-vehicle.parameters['FRAME_CLASS']=1 # quad
-vehicle.parameters['FRAME_TYPE']=0 # plus
+# build tree
 
-# disable vehicle arming checks to prevent accel hangup
-vehicle.parameters['ARMING_CHECK']=0
+# parameter setting
+config = py_trees.composites.Sequence(name="Config",
+                                        children=[SetParam(vehicle,'FRAME_CLASS',1),
+                                                  SetParam(vehicle,'FRAME_TYPE',0),
+                                                  SetParam(vehicle,'ARMING_CHECK',0),
+                                                  SetParam(vehicle,'FS_THR_ENABLE',3)])
 
-# set to always land if RC lost
-# http://ardupilot.org/copter/docs/parameters.html
-vehicle.parameters['FS_THR_ENABLE']=3
+# keep sending arm until returns armed=true
+arm_drone = py_trees.decorators.FailureIsRunning(py_trees.composites.Sequence(name="Arming",
+                                                                              children=[ArmDrone(vehicle),
+                                                                                        IsArmed(vehicle)]))
 
-# build tree        
-init_guided = ChangeMode(vehicle,'GUIDED')
-wait_armable = py_trees.decorators.FailureIsRunning(IsArmable(vehicle))
-arm_drone = ArmDrone(vehicle)
-take_off = SimpleTakeoff(vehicle,20)
-climb = py_trees.decorators.FailureIsRunning(AltGlobalAbove(vehicle,600))
+# start-up and take-off sequence, waiting until climb to given altitude
 launch = py_trees.composites.Sequence(name="Launch",
-                                    children=[init_guided,
-                                              wait_armable,
+                                    children=[ChangeMode(vehicle,'GUIDED'),
+                                              py_trees.decorators.FailureIsRunning(IsArmable(vehicle)),
                                               arm_drone,
-                                              take_off,
-                                              climb])
+                                              SimpleTakeoff(vehicle,20),
+                                              py_trees.decorators.FailureIsRunning(AltGlobalAbove(vehicle,600))])
 
-def move_behaviour(vehicle,dNorth, dEast, dDown):    
+# utility function for behaviour to move by offset and wait until almost stationary
+def move_behaviour(vehicle, dNorth, dEast, dDown):    
     move = py_trees.composites.Sequence(name="move",
                                         children=[MoveDrone(vehicle,dNorth, dEast, dDown),                                        
                                                   py_trees.decorators.FailureIsRunning(py_trees.decorators.Inverter(LatSpeedUnder(vehicle,1.0))),
                                                   py_trees.decorators.FailureIsRunning(LatSpeedUnder(vehicle,0.1))])
     return move
 
+# land, including wait until disarm
+land = py_trees.composites.Sequence(name="land",
+                                    children=[ChangeMode(vehicle,'RTL'),                                        
+                                              py_trees.decorators.FailureIsRunning(py_trees.decorators.Inverter(IsArmed(vehicle)))])
+
+# put a one-shot over the whole mission, else it takes off again after landing
 root = py_trees.decorators.OneShot(py_trees.composites.Sequence(name="Simple Flight",
-                                   children=[launch,
+                                   children=[config,
+                                             launch,
                                              move_behaviour(vehicle,20,20,0),
                                              move_behaviour(vehicle,20,-20,0),
-                                             ChangeMode(vehicle,'RTL')]))
+                                             land]))
 
 # piccies
 py_trees.display.render_dot_tree(root)
+
 # tree
 behaviour_tree = py_trees.trees.BehaviourTree(root)
 snapshot_visitor = py_trees.visitors.SnapshotVisitor()

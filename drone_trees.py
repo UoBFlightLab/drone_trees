@@ -4,6 +4,21 @@ import py_trees
 import math
 from dronekit import connect, VehicleMode, LocationGlobal, LocationGlobalRelative
 
+
+class SetParam(py_trees.behaviour.Behaviour):
+
+    def __init__(self, vehicle, param_name, new_value):
+        # use name of mode as label for behaviour
+        super(SetParam, self).__init__("%s=%i" % (param_name, new_value))
+        self._vehicle = vehicle
+        self._param_name = param_name
+        self._new_value = new_value
+
+    def update(self):
+        self._vehicle.parameters[self._param_name]=self._new_value
+        return py_trees.common.Status.SUCCESS
+
+
 class ChangeMode(py_trees.behaviour.Behaviour):
 
     def __init__(self, vehicle, mode_name):
@@ -33,7 +48,19 @@ class IsArmable(py_trees.behaviour.Behaviour):
             return py_trees.common.Status.FAILURE
 
 
+class IsArmed(py_trees.behaviour.Behaviour):
 
+    def __init__(self, vehicle):
+        super(IsArmed, self).__init__('is_armed')
+        self._vehicle = vehicle
+        
+    def update(self):
+        if self._vehicle.armed:
+            return py_trees.common.Status.SUCCESS
+        else:
+            return py_trees.common.Status.FAILURE
+
+        
 class ArmDrone(py_trees.behaviour.Behaviour):
 
     def __init__(self, vehicle):
