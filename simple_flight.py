@@ -2,6 +2,7 @@
 
 import py_trees
 import time
+import socket
 from drone_trees import *
 from dronekit import connect
 
@@ -9,7 +10,12 @@ from dronekit import connect
 connection_string = 'tcp:127.0.0.1:5760'
 #connection_string = 'tcp:127.0.0.1:5762' # if mission planner on
 print("Connecting to vehicle on: %s" % (connection_string,))
-vehicle = connect(connection_string, wait_ready=True)
+try:
+    vehicle = connect(connection_string, wait_ready=True)
+except socket.error as e:
+    print e
+    # proceed just with a blank object so I can render the tree
+    vehicle=None
 
 # build tree
 
@@ -48,14 +54,19 @@ land = py_trees.composites.Sequence(name="land",
 
 # put a one-shot over the whole mission, else it takes off again after landing
 root = py_trees.decorators.OneShot(py_trees.composites.Sequence(name="Simple Flight",
-                                   children=[config,
-                                             launch,
-                                             move_behaviour(vehicle,20,20,0),
-                                             move_behaviour(vehicle,20,-20,0),
-                                             land]))
+                                       children=[config,
+                                                 launch,
+                                                 move_behaviour(vehicle,20,20,0),
+                                                 move_behaviour(vehicle,20,-20,0),
+                                                 land]),
+                                   name='OneShot')
 
 # piccies
-py_trees.display.render_dot_tree(root)
+py_trees.display.render_dot_tree(root, name='simple_flight')
+
+# stop here if vehicle never connected
+if vehicle==None:
+  exit()
 
 # tree
 behaviour_tree = py_trees.trees.BehaviourTree(root)
