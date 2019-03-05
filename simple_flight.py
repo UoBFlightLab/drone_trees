@@ -7,7 +7,8 @@ from drone_trees import *
 from dronekit import connect
 
 # Connect to the Vehicle.
-connection_string = 'tcp:127.0.0.1:5762'
+#connection_string = 'tcp:127.0.0.1:5762'
+connection_string = 'tcp:127.0.0.1:14550'
 #connection_string = 'tcp:127.0.0.1:5762' # if mission planner on
 print("Connecting to vehicle on: %s" % (connection_string,))
 try:
@@ -46,7 +47,7 @@ launch = py_trees.composites.Sequence(name="Launch",
                                               arm_drone,
                                               SimpleTakeoff(vehicle,20),
                                               PlaySound('sounds/TakeOff.wav'),
-                                              py_trees.decorators.FailureIsRunning(AltGlobalAbove(vehicle,600))])
+                                              py_trees.decorators.FailureIsRunning(AltLocalAbove(vehicle,18))])
 
 # utility function for behaviour to move by offset and wait until almost stationary
 def move_behaviour(vehicle, dNorth, dEast, dDown):    
@@ -77,16 +78,37 @@ land = py_trees.composites.Sequence(name="land",
                                               py_trees.decorators.FailureIsRunning(py_trees.decorators.Inverter(IsArmed(vehicle)))])
 
 # put a one-shot over the whole mission, else it takes off again after landing
-root = py_trees.decorators.OneShot(py_trees.composites.Sequence(name="Simple Flight",
-                                       children=[config,
-                                                 launch,
-                                                 move_behaviour(vehicle,20,20,0),
-                                                 move_behaviour(vehicle,20,-20,0),
-                                                 land]),
-                                   name='OneShot')
+flight = py_trees.decorators.OneShot(py_trees.composites.Sequence(name="Simple Flight",
+                                                                  children=[config,
+                                                                            launch,
+                                                                            move_behaviour(vehicle,20,20,0),
+                                                                            move_behaviour(vehicle,20,-20,0),
+                                                                            move_behaviour(vehicle,20,20,0),
+                                                                            move_behaviour(vehicle,20,-20,0),
+                                                                            land]),
+                                     name='OneShot')
+
+# battery caller utility
+def battery_caller(vehicle,level,word):
+    bt = py_trees.decorators.FailureIsRunning(py_trees.decorators.OneShot(py_trees.composites.Sequence(children=[BatteryLevelAbove(vehicle,level),
+                                                                            wait_while(BatteryLevelAbove(vehicle,level)),
+                                                                            PlaySound("sounds/%s.wav" % word),
+                                                                            PlaySound("sounds/percent.wav")]),
+                                     name="call_%s" % word))
+    return bt
+
+battery_callers = py_trees.composites.Parallel(children=[battery_caller(vehicle,80,'eighty'),
+                                                         battery_caller(vehicle,60,'sixty'),
+                                                         battery_caller(vehicle,40,'forty'),
+                                                         battery_caller(vehicle,20,'twenty')],
+                                               name='Call each level')
+
+root = py_trees.composites.Parallel(children=[flight,
+                                              battery_callers],
+                                    name='Parallel')
 
 # piccies
-py_trees.display.render_dot_tree(root, name='simple_flight')
+#py_trees.display.render_dot_tree(root, name='simple_flight')
 
 # stop here if vehicle never connected
 if vehicle==None:

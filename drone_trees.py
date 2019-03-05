@@ -141,7 +141,18 @@ class AltLocalAbove(py_trees.behaviour.Behaviour):
         else:
             return py_trees.common.Status.FAILURE
 
+class BatteryLevelAbove(py_trees.behaviour.Behaviour):
 
+    def __init__(self, vehicle, level):
+        super(BatteryLevelAbove, self).__init__("Bat over %f pc" % level)
+        self._vehicle = vehicle
+        self._level = level
+        
+    def update(self):
+        if self._vehicle.battery.level >= self._level:
+            return py_trees.common.Status.SUCCESS
+        else:
+            return py_trees.common.Status.FAILURE
 
 def get_location_metres(original_location, dNorth, dEast):
     """
