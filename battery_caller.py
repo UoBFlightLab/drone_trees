@@ -14,10 +14,10 @@ def wait_while(target_behaviour):
 # battery caller utility
 def battery_level_caller(vehicle,level,word):
     bt = py_trees.decorators.FailureIsRunning(py_trees.decorators.OneShot(py_trees.composites.Sequence(children=[BatteryLevelAbove(vehicle,level),
-                                                                            wait_while(BatteryLevelAbove(vehicle,level)),
-                                                                            PlaySound("sounds/%s.wav" % word),
-                                                                            PlaySound("sounds/percent.wav")]),
-                                     name="call_%s" % word))
+                                                                                                                 wait_while(BatteryLevelAbove(vehicle,level)),
+                                                                                                                 PlaySound("sounds/%s.wav" % word),
+                                                                                                                 PlaySound("sounds/percent.wav")],
+                                                                                                       name="call_%s" % word)))
     return bt
 
 
@@ -50,7 +50,7 @@ if __name__=='__main__':
 
     # if vehicle never connected, render the tree and stop
     if vehicle==None:
-        #py_trees.display.render_dot_tree(root, name='battery_caller')
+        py_trees.display.render_dot_tree(root, name='battery_caller')
         exit()
 
     # tree
