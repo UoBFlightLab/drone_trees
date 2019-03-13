@@ -2,6 +2,7 @@
 
 import py_trees
 import math
+import os
 from dronekit import connect, VehicleMode, LocationGlobal, LocationGlobalRelative
 
 
@@ -33,6 +34,22 @@ class ChangeMode(py_trees.behaviour.Behaviour):
         self._vehicle.mode = self._mode
         return py_trees.common.Status.SUCCESS
 
+
+class CheckMode(py_trees.behaviour.Behaviour):
+
+    def __init__(self, vehicle, mode_name):
+        # use name of mode as label for behaviour
+        super(CheckMode, self).__init__("Is mode %s ?" % mode_name)
+        # in time may want to delay connection
+        # and use setup method instead
+        self._vehicle = vehicle
+        self._mode_name = mode_name
+
+    def update(self):
+        if self._vehicle.mode.name == self._mode_name:
+            return py_trees.common.Status.SUCCESS
+        else:
+            return py_trees.common.Status.FAILURE
 
 
 class IsArmable(py_trees.behaviour.Behaviour):
@@ -86,6 +103,16 @@ class SimpleTakeoff(py_trees.behaviour.Behaviour):
         return py_trees.common.Status.SUCCESS
 
 
+class PlaySound(py_trees.behaviour.Behaviour):
+
+    def __init__(self, filename):
+        super(PlaySound, self).__init__("%s" % filename)
+        self._filename = filename
+
+    def update(self):
+        os.system("cat %s > /dev/dsp" % self._filename)
+        return py_trees.common.Status.SUCCESS
+
 
 class AltGlobalAbove(py_trees.behaviour.Behaviour):
 
@@ -101,6 +128,31 @@ class AltGlobalAbove(py_trees.behaviour.Behaviour):
             return py_trees.common.Status.FAILURE
 
 
+class AltLocalAbove(py_trees.behaviour.Behaviour):
+
+    def __init__(self, vehicle, altitude):
+        super(AltLocalAbove, self).__init__("Over %f (local)" % altitude)
+        self._vehicle = vehicle
+        self._altitude = altitude
+        
+    def update(self):
+        if self._vehicle.location.global_relative_frame.alt >= self._altitude:
+            return py_trees.common.Status.SUCCESS
+        else:
+            return py_trees.common.Status.FAILURE
+
+class BatteryLevelAbove(py_trees.behaviour.Behaviour):
+
+    def __init__(self, vehicle, level):
+        super(BatteryLevelAbove, self).__init__("Bat over %f pc" % level)
+        self._vehicle = vehicle
+        self._level = level
+        
+    def update(self):
+        if self._vehicle.battery.level >= self._level:
+            return py_trees.common.Status.SUCCESS
+        else:
+            return py_trees.common.Status.FAILURE
 
 def get_location_metres(original_location, dNorth, dEast):
     """
