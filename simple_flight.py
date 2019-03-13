@@ -43,9 +43,10 @@ def ensure_mode(vehicle,mode_name):
 
 # start-up and take-off sequence, waiting until climb to given altitude
 launch = py_trees.composites.Sequence(name="Launch",
-                                    children=[ensure_mode(vehicle,'GUIDED'),
-                                              py_trees.decorators.FailureIsRunning(IsArmable(vehicle)),
-                                              arm_drone,
+                                    children=[py_trees.decorators.FailureIsRunning(IsArmed(vehicle)),
+                                              ensure_mode(vehicle,'GUIDED'),
+                                              #py_trees.decorators.FailureIsRunning(IsArmable(vehicle)),
+                                              #arm_drone,
                                               SimpleTakeoff(vehicle,20),
                                               PlaySound('sounds/takeoff.wav'),
                                               py_trees.decorators.FailureIsRunning(AltLocalAbove(vehicle,18))])
