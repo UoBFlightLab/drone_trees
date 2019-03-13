@@ -90,12 +90,11 @@ flight = py_trees.decorators.OneShot(py_trees.composites.Sequence(name="Simple F
                                                                             land]),
                                      name='OneShot')
 
-root = py_trees.composites.Parallel(children=[flight,
-                                              battery_caller(vehicle)],
-                                    name='Parallel')
+root = py_trees.composites.Parallel(children=[battery_caller(vehicle),                                              flight],
+                                    name='Operation')
 
 # piccies
-#py_trees.display.render_dot_tree(root, name='simple_flight')
+py_trees.display.render_dot_tree(root, name='simple_flight')
 
 # stop here if vehicle never connected
 if vehicle==None:
