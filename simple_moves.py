@@ -44,7 +44,6 @@ def wait_for_alt_local_over(vehicle,alt):
 root = py_trees.decorators.OneShot(py_trees.composites.Sequence(name="Simple Flight",
                                                                   children=[py_trees.decorators.FailureIsRunning(AltLocalAbove(vehicle,10)),
                                                                             py_trees.decorators.FailureIsRunning(CheckMode(vehicle,'GUIDED')),
-                                                                            ensure_mode(vehicle,'GUIDED'),
                                                                             move_behaviour(vehicle,-20,20,-4),
                                                                             move_behaviour(vehicle,-20,-20,4)]),
                                      name='OneShot')
