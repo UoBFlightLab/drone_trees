@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
 import py_trees
 import time
@@ -9,13 +9,13 @@ from dronekit import connect
 
 # Connect to the Vehicle.
 #connection_string = 'tcp:127.0.0.1:5762'
-connection_string = 'tcp:127.0.0.1:14550'
+connection_string = 'udp:127.0.0.1:14551'
 #connection_string = 'tcp:127.0.0.1:5762' # if mission planner on
 print("Connecting to vehicle on: %s" % (connection_string,))
 try:
     vehicle = connect(connection_string, wait_ready=True)
 except socket.error as e:
-    print e
+    print(e)
     # proceed just with a blank object so I can render the tree
     vehicle=None
 
@@ -43,9 +43,10 @@ def ensure_mode(vehicle,mode_name):
 
 # start-up and take-off sequence, waiting until climb to given altitude
 launch = py_trees.composites.Sequence(name="Launch",
-                                    children=[ensure_mode(vehicle,'GUIDED'),
-                                              py_trees.decorators.FailureIsRunning(IsArmable(vehicle)),
-                                              arm_drone,
+                                    children=[py_trees.decorators.FailureIsRunning(IsArmed(vehicle)),
+                                              ensure_mode(vehicle,'GUIDED'),
+                                              #py_trees.decorators.FailureIsRunning(IsArmable(vehicle)),
+                                              #arm_drone,
                                               SimpleTakeoff(vehicle,20),
                                               PlaySound('sounds/takeoff.wav'),
                                               py_trees.decorators.FailureIsRunning(AltLocalAbove(vehicle,18))])
@@ -108,15 +109,15 @@ behaviour_tree.visitors.append(snapshot_visitor)
 # run the thing
 # and every second for five minutes, print stuff
 for ii in range(300):
-    print "******* %i ********" % ii
-    print vehicle.armed
-    print vehicle.battery
-    print vehicle.mode.name
-    print vehicle.location.global_frame.alt
-    print vehicle.velocity
-    print vehicle.rangefinder.distance
+    print("******* %i ********" % ii)
+    print(vehicle.armed)
+    print(vehicle.battery)
+    print(vehicle.mode.name)
+    print(vehicle.location.global_frame.alt)
+    print(vehicle.velocity)
+    print(vehicle.rangefinder.distance)
     # now the tree bit
-    print "+++++++++++++++++++++"
+    print("+++++++++++++++++++++")
     behaviour_tree.tick()
     ascii_tree = py_trees.display.ascii_tree(behaviour_tree.root,snapshot_information=snapshot_visitor)
     print(ascii_tree)
