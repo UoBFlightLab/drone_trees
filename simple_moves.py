@@ -11,7 +11,7 @@ from dronekit import connect
 #connection_string = 'tcp:127.0.0.1:5762'
 connection_string = 'udp:127.0.0.1:14551'
 #connection_string = 'tcp:127.0.0.1:5762' # if mission planner on
-print("Connecting to vehicle on: %s" % (connection_string,))
+print(("Connecting to vehicle on: %s" % (connection_string,)))
 try:
     vehicle = connect(connection_string, wait_ready=True)
 except socket.error as e:

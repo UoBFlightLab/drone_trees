@@ -41,7 +41,7 @@ if __name__=='__main__':
     try:
         vehicle = connect(connection_string, wait_ready=True)
     except socket.error as e:
-        print e
+        print(e)
         # proceed just with a blank object so I can render the tree
         vehicle=None
 
@@ -61,12 +61,12 @@ if __name__=='__main__':
     # run the thing
     # and every second for ten minutes, print stuff
     for ii in range(600):
-        print "******* %i ********" % ii
-        print vehicle.armed
-        print vehicle.battery
-        print vehicle.mode.name
+        print("******* %i ********" % ii)
+        print(vehicle.armed)
+        print(vehicle.battery)
+        print(vehicle.mode.name)
         # now the tree bit
-        print "+++++++++++++++++++++"
+        print("+++++++++++++++++++++")
         behaviour_tree.tick()
         ascii_tree = py_trees.display.ascii_tree(behaviour_tree.root,snapshot_information=snapshot_visitor)
         print(ascii_tree)

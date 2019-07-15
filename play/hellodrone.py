@@ -24,7 +24,7 @@ vehicle.mode = VehicleMode('GUIDED')
 # prepare to print altitude reports
 @vehicle.on_attribute('location')
 def location_callback(self, attr_name, value):
-    print "Altitude : %s" % value.global_relative_frame.alt
+    print("Altitude : %s" % value.global_relative_frame.alt)
 
 # wait for armable
 for ii in range(300):
@@ -32,9 +32,9 @@ for ii in range(300):
         break
     time.sleep(1)
     
-print 'Arming'
+print('Arming')
 vehicle.armed=True
-print 'Taking off to alt 20m'
+print('Taking off to alt 20m')
 vehicle.simple_takeoff(20)
 
 # wait for a bit
@@ -42,7 +42,7 @@ time.sleep(40)
 
 # now throw something at it... 
 # http://ardupilot.org/dev/docs/using-sitl-for-ardupilot-testing.html
-print 'Simulating RC link loss'
+print('Simulating RC link loss')
 vehicle.parameters['SIM_RC_FAIL']=1
 
 # wait for a bit longer and see what happens

@@ -32,22 +32,22 @@ for ii in range(300):
         break
     time.sleep(1)
     
-print 'Arming'
+print('Arming')
 vehicle.armed=True
-print 'Taking off to alt 20m'
+print('Taking off to alt 20m')
 vehicle.simple_takeoff(20)
 
 # and every second for five minutes, print stuff
 for ii in range(300):
-    print "******* %i ********" % ii
+    print("******* %i ********" % ii)
     if ii==60:
         vehicle.mode = VehicleMode('RTL')
-    print vehicle.armed
-    print vehicle.battery
-    print vehicle.mode.name
-    print vehicle.location.global_frame.alt
-    print vehicle.velocity
-    print vehicle.rangefinder.distance
+    print(vehicle.armed)
+    print(vehicle.battery)
+    print(vehicle.mode.name)
+    print(vehicle.location.global_frame.alt)
+    print(vehicle.velocity)
+    print(vehicle.rangefinder.distance)
     time.sleep(1)
 
 # Close vehicle object before exiting script

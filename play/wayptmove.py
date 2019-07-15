@@ -8,33 +8,33 @@ print("Connecting to vehicle on: %s" % (connection_string,))
 vehicle = connect(connection_string, wait_ready=True)
 
 # Get some vehicle attributes (state)
-print "Get some vehicle attribute values:"
-print " GPS: %s" % vehicle.gps_0
-print " Battery: %s" % vehicle.battery
-print " Last Heartbeat: %s" % vehicle.last_heartbeat
-print " Is Armable?: %s" % vehicle.is_armable
-print " System status: %s" % vehicle.system_status.state
-print " Mode: %s" % vehicle.mode.name    # settable
-print " Location: ", vehicle.location.global_frame
+print("Get some vehicle attribute values:")
+print(" GPS: %s" % vehicle.gps_0)
+print(" Battery: %s" % vehicle.battery)
+print(" Last Heartbeat: %s" % vehicle.last_heartbeat)
+print(" Is Armable?: %s" % vehicle.is_armable)
+print(" System status: %s" % vehicle.system_status.state)
+print(" Mode: %s" % vehicle.mode.name)    # settable
+print(" Location: ", vehicle.location.global_frame)
 
 #Create a message listener for all messages.
 #@vehicle.on_message('*')
 @vehicle.on_message('MISSION_ACK')
 def listener(self, name, message):
-    print 'message: %s' % message
+    print('message: %s' % message)
     
 #vehicle.commands.next=8
 
 #vehicle.mode = VehicleMode("LAND")
 
-print 'Downloading mission'
+print('Downloading mission')
 cmds = vehicle.commands
 cmds.download()
 cmds.wait_ready()
 for mi in cmds:
-    print mi.x,mi.y,mi.z
+    print(mi.x,mi.y,mi.z)
 
-print 'Sending waypoint modification'
+print('Sending waypoint modification')
 idx = 5 # note this is one-based for MAVlink
 lat = cmds[idx-1].x
 lon = cmds[idx-1].y
@@ -49,12 +49,12 @@ vehicle.message_factory.mission_item_send(0, 0, idx, frame,
                     delay, 0, 0, 0,
                     lat+1e-4, lon+1e-4, alt+5)
 
-print 'Downloading mission'
+print('Downloading mission')
 cmds = vehicle.commands
 cmds.download()
 cmds.wait_ready()
 for mi in cmds:
-    print mi.x,mi.y,mi.z
+    print(mi.x,mi.y,mi.z)
 
 #m = input('Press ENTER to stop')
     

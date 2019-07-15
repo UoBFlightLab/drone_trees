@@ -119,7 +119,7 @@ for ii in range(300):
     # now the tree bit
     print("+++++++++++++++++++++")
     behaviour_tree.tick()
-    ascii_tree = py_trees.display.ascii_tree(behaviour_tree.root,snapshot_information=snapshot_visitor)
+    ascii_tree = py_trees.display.ascii_tree(behaviour_tree.root, visited=snapshot_visitor.visited, previously_visited=snapshot_visitor.visited)
     print(ascii_tree)
     # pause
     time.sleep(1)

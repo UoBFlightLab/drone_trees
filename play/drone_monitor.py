@@ -41,19 +41,19 @@ vehicle = connect(connection_string, wait_ready=True)
 
 # and every second for five minutes, print stuff
 for ii in range(300):
-    print "******* %i ********" % ii
+    print("******* %i ********" % ii)
     if ii==60:
         vehicle.mode = VehicleMode('RTL')
-    print vehicle.armed
-    print vehicle.battery
-    print vehicle.mode.name
-    print vehicle.location.global_frame.alt
-    print vehicle.velocity
-    print vehicle.rangefinder.distance
-    print vehicle.location.global_frame
+    print(vehicle.armed)
+    print(vehicle.battery)
+    print(vehicle.mode.name)
+    print(vehicle.location.global_frame.alt)
+    print(vehicle.velocity)
+    print(vehicle.rangefinder.distance)
+    print(vehicle.location.global_frame)
     # experiment with offsets
     target = get_location_metres(vehicle.location.global_frame,10,10)
-    print target
+    print(target)
     time.sleep(1)
 
 # Close vehicle object before exiting script
