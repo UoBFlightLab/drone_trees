@@ -27,17 +27,17 @@ SAFTI = 7 # SAFTI waypint number
 
 def preflight_GPS(vehicle):
     bt = py_trees.decorators.FailureIsRunning(py_trees.composites.Selector(children=[CheckGPS(vehicle, 4),
-                                                                                     PlaySound('sounds/NoRTK.wav')]))
+                                                                                     PlaySoundFallback('sounds/NoRTK.wav')]))
     return bt
 
 def preflight_EKF(vehicle):
     bt = py_trees.decorators.FailureIsRunning(py_trees.composites.Selector(children=[CheckEKF(vehicle),
-                                                                                     PlaySound('sounds/BadEKF.wav')]))
+                                                                                     PlaySoundFallback('sounds/BadEKF.wav')]))
     return bt
 
 def preflight_IsArmable(vehicle):
     bt = py_trees.decorators.FailureIsRunning(py_trees.composites.Selector(children=[IsArmable(vehicle),
-                                                                                     PlaySound('sounds/DroneNotArmable')]))
+                                                                                     PlaySoundFallback('sounds/DroneNotArmable')]))
     return bt
 
 preflight = py_trees.composites.Sequence(name="Pre-flight",

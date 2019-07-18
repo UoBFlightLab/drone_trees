@@ -83,16 +83,14 @@ class SetCounter(py_trees.behaviour.Behaviour):
         self._vehicle.commands.next = self._wpn
         return py_trees.common.Status.SUCCESS
 
-class PrintFallback(py_trees.behaviour.Behaviour):
+class PlaySoundFallback(py_trees.behaviour.Behaviour):
 
-    def __init__(self, vehicle, param_name, print_message):
-        super(PrintFallback, self).__init__("%s" % (param_name))
-        self._vehicle = vehicle
-        self._param_name = param_name
-        self._print_message = print_message
+    def __init__(self, filename):
+        super(PlaySoundFallback, self).__init__("%s" % (filename))
+        self._filename = filename
 
     def update(self):
-        print(self._param_name)
+        os.system("cat %s > /dev/dsp" % self._filename)
         return py_trees.common.Status.FAILURE
 
 class MissionUpload(py_trees.behaviour.Behaviour):
