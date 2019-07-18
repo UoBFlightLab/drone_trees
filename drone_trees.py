@@ -4,7 +4,8 @@ import py_trees
 import math
 import os
 from dronekit import connect, VehicleMode, LocationGlobal, LocationGlobalRelative
-
+from pymavlink import mavutil
+from mission_utility import upload_mission, readmission
 
 class SetParam(py_trees.behaviour.Behaviour):
 
@@ -34,6 +35,76 @@ class ChangeMode(py_trees.behaviour.Behaviour):
         self._vehicle.mode = self._mode
         return py_trees.common.Status.SUCCESS
 
+class CheckGPS(py_trees.behaviour.Behaviour):
+
+    def __init__(self, vehicle, fixType):
+        super(CheckGPS, self).__init__("GPS Status Check > %i" % fixType)
+        self._vehicle = vehicle
+        self._fixType = fixType
+
+    def update(self):
+        if self._vehicle.gps_0.fix_type > self._fixType:
+            return py_trees.common.Status.SUCCESS
+        else:
+            return py_trees.common.Status.FAILURE
+class CheckEKF(py_trees.behaviour.Behaviour):
+
+    def __init__(self, vehicle):
+        super(CheckEKF, self).__init__("EKF Check")
+        self._vehicle = vehicle
+
+    def update(self):
+        if self._vehicle.ekf_ok:
+            return py_trees.common.Status.SUCCESS
+        else:
+            return py_trees.common.Status.FAILURE
+
+class CheckCounter(py_trees.behaviour.Behaviour):
+
+    def __init__(self, vehicle, wpn):
+        super(CheckCounter, self).__init__("Check Counter %i" % wpn)
+        self._vehicle = vehicle
+        self._wpn = wpn
+
+    def update(self):
+        if self._wpn == self._vehicle.commands.next:
+            return py_trees.common.Status.SUCCESS
+        else:
+            return py_trees.common.Status.FAILURE
+
+class SetCounter(py_trees.behaviour.Behaviour):
+
+    def __init__(self, vehicle, wpn):
+        super(SetCounter, self).__init__("Set wp counter to %i" % wpn)
+        self._vehicle = vehicle
+        self._wpn = wpn
+
+    def update(self):
+        self._vehicle.commands.next = self._wpn
+        return py_trees.common.Status.SUCCESS
+
+class PrintFallback(py_trees.behaviour.Behaviour):
+
+    def __init__(self, vehicle, param_name, print_message):
+        super(PrintFallback, self).__init__("%s" % (param_name))
+        self._vehicle = vehicle
+        self._param_name = param_name
+        self._print_message = print_message
+
+    def update(self):
+        print(self._param_name)
+        return py_trees.common.Status.FAILURE
+
+class MissionUpload(py_trees.behaviour.Behaviour):
+
+    def __init__(self, vehicle, mission_file):
+        super(MissionUpload, self).__init__('Mission Upload')
+        self._vehicle = vehicle
+        self._mission_file = mission_file
+        
+    def update(self):
+        upload_mission(self._vehicle, self._mission_file)
+        return py_trees.common.Status.SUCCESS
 
 class CheckMode(py_trees.behaviour.Behaviour):
 
@@ -64,19 +135,6 @@ class IsArmable(py_trees.behaviour.Behaviour):
         else:
             return py_trees.common.Status.FAILURE
 
-
-class IsArmed(py_trees.behaviour.Behaviour):
-
-    def __init__(self, vehicle):
-        super(IsArmed, self).__init__('is_armed')
-        self._vehicle = vehicle
-        
-    def update(self):
-        if self._vehicle.armed:
-            return py_trees.common.Status.SUCCESS
-        else:
-            return py_trees.common.Status.FAILURE
-
         
 class ArmDrone(py_trees.behaviour.Behaviour):
 
@@ -88,7 +146,6 @@ class ArmDrone(py_trees.behaviour.Behaviour):
         self._vehicle.armed=True
         return py_trees.common.Status.SUCCESS
     
-
 
 class SimpleTakeoff(py_trees.behaviour.Behaviour):
 
