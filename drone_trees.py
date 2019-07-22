@@ -94,18 +94,6 @@ class GoSAFTI(py_trees.behaviour.Behaviour):
         self._vehicle.commands.next = self._wpn
         return py_trees.common.Status.SUCCESS
 
-class PrintFallback(py_trees.behaviour.Behaviour):
-
-    def __init__(self, vehicle, param_name, print_message):
-        super(PrintFallback, self).__init__("%s" % (param_name))
-        self._vehicle = vehicle
-        self._param_name = param_name
-        self._print_message = print_message
-
-    def update(self):
-        print(self._param_name)
-        return py_trees.common.Status.FAILURE
-
 class MissionUpload(py_trees.behaviour.Behaviour):
 
     def __init__(self, vehicle, mission_file):
