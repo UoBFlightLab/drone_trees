@@ -83,6 +83,17 @@ class SetCounter(py_trees.behaviour.Behaviour):
         self._vehicle.commands.next = self._wpn
         return py_trees.common.Status.SUCCESS
 
+class GoSAFTI(py_trees.behaviour.Behaviour):
+
+    def __init__(self, vehicle, wpn):
+        super(GoSAFTI, self).__init__("Go SAFTI (WP %i)" % wpn)
+        self._vehicle = vehicle
+        self._wpn = wpn
+
+    def update(self):
+        self._vehicle.commands.next = self._wpn
+        return py_trees.common.Status.SUCCESS
+
 class PrintFallback(py_trees.behaviour.Behaviour):
 
     def __init__(self, vehicle, param_name, print_message):
@@ -170,6 +181,15 @@ class PlaySound(py_trees.behaviour.Behaviour):
         os.system("cat %s > /dev/dsp" % self._filename)
         return py_trees.common.Status.SUCCESS
 
+class WarningSound(py_trees.behaviour.Behaviour):
+
+    def __init__(self, filename):
+        super(WarningSound, self).__init__("%s" % filename)
+        self._filename = filename
+
+    def update(self):
+        os.system("cat %s > /dev/dsp" % self._filename)
+        return py_trees.common.Status.FAILURE
 
 class AltGlobalAbove(py_trees.behaviour.Behaviour):
 

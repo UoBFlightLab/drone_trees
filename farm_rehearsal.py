@@ -27,17 +27,17 @@ SAFTI = 7 # SAFTI waypint number
 
 def preflight_GPS(vehicle):
     bt = py_trees.decorators.FailureIsRunning(py_trees.composites.Selector(children=[CheckGPS(vehicle, 4),
-                                                                                     PlaySound('sounds/NoRTK.wav')]))
+                                                                                     WarningSound('sounds/NoRTK.wav')]))
     return bt
 
 def preflight_EKF(vehicle):
     bt = py_trees.decorators.FailureIsRunning(py_trees.composites.Selector(children=[CheckEKF(vehicle),
-                                                                                     PlaySound('sounds/BadEKF.wav')]))
+                                                                                     WarningSound('sounds/BadEKF.wav')]))
     return bt
 
 def preflight_IsArmable(vehicle):
     bt = py_trees.decorators.FailureIsRunning(py_trees.composites.Selector(children=[IsArmable(vehicle),
-                                                                                     PlaySound('sounds/DroneNotArmable')]))
+                                                                                     WarningSound('sounds/DroneNotArmable')]))
     return bt
 
 preflight = py_trees.composites.Sequence(name="Pre-flight",
@@ -47,13 +47,13 @@ preflight = py_trees.composites.Sequence(name="Pre-flight",
 # mission
 
 def mission_GPS(vehicle):
-    bt = py_trees.decorators.FailureIsRunning(py_trees.composites.Selector(children=[CheckGPS(vehicle, 5),
-                                                                                     SetCounter(vehicle, SAFTI)]))
+    bt = py_trees.decorators.OneShot(py_trees.decorators.FailureIsRunning(py_trees.composites.Selector(children=[CheckGPS(vehicle, 5),
+                                                                                     GoSAFTI(vehicle, SAFTI)])))
     return bt
 
 def mission_EKF(vehicle):
-    bt = py_trees.decorators.FailureIsRunning(py_trees.composites.Selector(children=[CheckEKF(vehicle),
-                                                                                     SetCounter(vehicle, SAFTI)]))
+    bt = py_trees.decorators.OneShot(py_trees.decorators.FailureIsRunning(py_trees.composites.Selector(children=[CheckEKF(vehicle),
+                                                                                     GoSAFTI(vehicle, SAFTI)])))
     return bt
 
 def wpChecklist(vehicle):
@@ -61,37 +61,32 @@ def wpChecklist(vehicle):
                                                                            mission_EKF(vehicle)])
     return bt
 
-def isCurrentWp(vehicle, wpn):
-    bt = py_trees.composites.Sequence(name=('Is Counter %i ?' % wpn), children=[CheckCounter(vehicle, wpn),
-                                                                                wpChecklist(vehicle)])
-    return bt
-
-def waitForCounter(vehicle, wpn):
-    bt = py_trees.composites.Sequence(name=('Wait for Waypoint %i' % wpn), children=[py_trees.decorators.FailureIsRunning(CheckCounter(vehicle, wpn)),
-                                                                                     py_trees.decorators.FailureIsRunning(LatSpeedUnder(vehicle, 1)),
-                                                                                     wpChecklist(vehicle)])
-    return bt
-
 def wpNode(vehicle, wpn):
-    bt = py_trees.decorators.OneShot(py_trees.composites.Selector(name=('WayPoint Node %i' % wpn), children=[isCurrentWp(vehicle, wpn),
-                                                                                                             waitForCounter(vehicle, wpn)]))
+    bt = py_trees.decorators.OneShot(py_trees.composites.Sequence(name=('Waypoint %i' % wpn),
+                                                                  children=[py_trees.decorators.FailureIsRunning(CheckCounter(vehicle, wpn)),
+                                                                            py_trees.decorators.FailureIsRunning(py_trees.decorators.Inverter(LatSpeedUnder(vehicle,1.0))),
+                                                                            py_trees.decorators.FailureIsRunning(LatSpeedUnder(vehicle, 1)),
+                                                                            wpChecklist(vehicle)]))
     return bt
 
-def wpNode_al(vehicle, wpn):
-    bt = py_trees.decorators.OneShot(py_trees.composites.Selector(name=('WayPoint Node %i' % wpn), children=[preflight_GPS(vehicle),
-                                                                                                             preflight_EKF(vehicle)]))
+
+def wpNode_noCheck(vehicle, wpn):
+    bt = py_trees.decorators.OneShot(py_trees.composites.Sequence(name=('Waypoint %i' % wpn),
+                                                                  children=[py_trees.decorators.FailureIsRunning(CheckCounter(vehicle, wpn)),
+                                                                            py_trees.decorators.FailureIsRunning(py_trees.decorators.Inverter(LatSpeedUnder(vehicle,1.0))),
+                                                                            py_trees.decorators.FailureIsRunning(LatSpeedUnder(vehicle, 1))]))
     return bt
 
-mission = py_trees.composites.Sequence(name='Mission', children=[MissionUpload(vehicle, 'seg1.txt'),
-                                                                 wpNode(vehicle, 1),
+mission = py_trees.composites.Parallel(name='Mission', children=[MissionUpload(vehicle, 'seg1.txt'),
+                                                                 wpNode_noCheck(vehicle, 1),
                                                                  wpNode(vehicle, 2),
                                                                  wpNode(vehicle, 3),
                                                                  wpNode(vehicle, 4),
                                                                  wpNode(vehicle, 5),
                                                                  wpNode(vehicle, 6),
-                                                                 wpNode(vehicle, 7),
-                                                                 wpNode_al(vehicle, 8),
-                                                                 wpNode_al(vehicle, 9)])
+                                                                 wpNode_noCheck(vehicle, 7),
+                                                                 wpNode_noCheck(vehicle, 8),
+                                                                 wpNode_noCheck(vehicle, 9)])
 
 root = py_trees.composites.Sequence(name="OPS",
                                     children=[preflight,
