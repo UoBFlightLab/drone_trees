@@ -6,3 +6,6 @@ terrain/**
 *.png
 *.pyc
 venv/*
+.vscode/settings.json
+seg1.txt
+test.py

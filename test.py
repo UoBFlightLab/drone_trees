@@ -1,15 +1,17 @@
 import py_trees
 import time
 import socket
-from drone_trees import *
+#from drone_trees import *
 from battery_caller import battery_caller
 from dronekit import connect
 from pymavlink import mavutil
-
-
+import pyttsx3
+from queue import Queue
+import threading
+"""
 vehicle = connect('udp:127.0.0.1:14551', wait_ready=True)
 
-'''
+
 class mavlinkTest(py_trees.behaviour.Behaviour):
 
     def __init__(self, vehicle, m):
@@ -60,7 +62,6 @@ class mavlinkTest(object):
             print(m.alt)
 
 a = mavlinkTest(vehicle)
-'''
 
 
 
@@ -79,3 +80,34 @@ a = mavlinkTest(vehicle)
 print(a._alt)
 
 vehicle.close()
+"""
+
+
+class VoiceAssistant(threading.Thread):
+    def __init__(self):
+        super(VoiceAssistant, self).__init__()
+        self.engine = pyttsx3.init()
+        self.q = Queue()
+        self.daemon = True
+
+    def add_say(self, msg):
+        self.q.put(msg)
+
+    def run(self):
+        while True:
+            self.engine.say(self.q.get())
+            self.engine.startLoop(False)
+            self.engine.iterate()
+            time.sleep(1)
+            #self.engine.runAndWait()
+            self.engine.endLoop()
+            self.q.task_done()
+
+
+if __name__ == '__main__':
+    va = VoiceAssistant()
+    va.start()
+    for i in range(0, 3):
+        va.add_say('Sally sells seashells by the seashore.')
+    print("now we want to exit...")
+    va.q.join() # ends the loop when queue is empty

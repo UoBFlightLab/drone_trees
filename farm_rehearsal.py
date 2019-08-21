@@ -7,6 +7,10 @@ from drone_trees import *
 from battery_caller import battery_caller
 from dronekit import connect
 from mission_utility import *
+import pyttsx3
+from queue import Queue
+import threading
+
 
 # Connect to the Vehicle.
 connection_string = 'udp:127.0.0.1:14551'
@@ -19,31 +23,35 @@ except socket.error as e:
     # proceed just with a blank object so I can render the tree
     vehicle=None
 
+#Initialising the Voice Assistant
+va = VoiceAssistant()
+# Starting Voice Assistant Thread
+va.start()
 # build tree
 
 # pre-flight
 
 SAFTI = 7 # SAFTI waypint number
 
-def preflight_GPS(vehicle):
+def preflight_GPS(vehicle, va):
     bt = py_trees.decorators.FailureIsRunning(py_trees.composites.Selector(children=[CheckGPS(vehicle, 4),
-                                                                                     WarningSound('sounds/NoRTK.wav')]))
+                                                                                     PlaySound('No RTK', va, returnFailure=True)]))
     return bt
 
-def preflight_EKF(vehicle):
+def preflight_EKF(vehicle, va):
     bt = py_trees.decorators.FailureIsRunning(py_trees.composites.Selector(children=[CheckEKF(vehicle),
-                                                                                     WarningSound('sounds/BadEKF.wav')]))
+                                                                                     PlaySound('Bad EKF', va, returnFailure=True)]))
     return bt
 
-def preflight_IsArmable(vehicle):
+def preflight_IsArmable(vehicle,va):
     bt = py_trees.decorators.FailureIsRunning(py_trees.composites.Selector(children=[IsArmable(vehicle),
-                                                                                     WarningSound('sounds/DroneNotArmable')]))
+                                                                                     PlaySound('Drone Not Armable',va, returnFailure=True)]))
     return bt
 
 preflight = py_trees.composites.Sequence(name="Pre-flight",
-                                         children=[preflight_GPS(vehicle),
-                                                   preflight_EKF(vehicle),
-                                                   preflight_IsArmable(vehicle)])
+                                         children=[preflight_GPS(vehicle, va),
+                                                   preflight_EKF(vehicle,va),
+                                                   preflight_IsArmable(vehicle, va)])
 # mission
 
 def mission_GPS(vehicle):
@@ -61,32 +69,34 @@ def wpChecklist(vehicle):
                                                                            mission_EKF(vehicle)])
     return bt
 
-def wpNode(vehicle, wpn):
+def wpNode(vehicle, wpn, wpName):
     bt = py_trees.decorators.OneShot(py_trees.composites.Sequence(name=('Waypoint %i' % wpn),
                                                                   children=[py_trees.decorators.FailureIsRunning(CheckCounter(vehicle, wpn)),
                                                                             py_trees.decorators.FailureIsRunning(py_trees.decorators.Inverter(LatSpeedUnder(vehicle,1.0))),
                                                                             py_trees.decorators.FailureIsRunning(LatSpeedUnder(vehicle, 1)),
+                                                                            PlaySound(wpName, va),
                                                                             wpChecklist(vehicle)]))
     return bt
 
 
-def wpNode_noCheck(vehicle, wpn):
+def wpNode_noCheck(vehicle, wpn, wpName):
     bt = py_trees.decorators.OneShot(py_trees.composites.Sequence(name=('Waypoint %i' % wpn),
                                                                   children=[py_trees.decorators.FailureIsRunning(CheckCounter(vehicle, wpn)),
                                                                             py_trees.decorators.FailureIsRunning(py_trees.decorators.Inverter(LatSpeedUnder(vehicle,1.0))),
-                                                                            py_trees.decorators.FailureIsRunning(LatSpeedUnder(vehicle, 1))]))
+                                                                            py_trees.decorators.FailureIsRunning(LatSpeedUnder(vehicle, 1)),
+                                                                            PlaySound(wpName, va)]))
     return bt
 
 mission = py_trees.composites.Parallel(name='Mission', children=[MissionUpload(vehicle, 'seg1.txt'),
-                                                                 wpNode_noCheck(vehicle, 1),
-                                                                 wpNode(vehicle, 2),
-                                                                 wpNode(vehicle, 3),
-                                                                 wpNode(vehicle, 4),
-                                                                 wpNode(vehicle, 5),
-                                                                 wpNode(vehicle, 6),
-                                                                 wpNode_noCheck(vehicle, 7),
-                                                                 wpNode_noCheck(vehicle, 8),
-                                                                 wpNode_noCheck(vehicle, 9)])
+                                                                 wpNode_noCheck(vehicle, 1, 'Take off'),
+                                                                 wpNode(vehicle, 2, 'TESTA'),
+                                                                 wpNode(vehicle, 3, 'SAFTI'),
+                                                                 wpNode(vehicle, 4, 'TWENTI'),
+                                                                 wpNode(vehicle, 5, 'TENNA'),
+                                                                 wpNode(vehicle, 6, 'ALPHA'),
+                                                                 wpNode_noCheck(vehicle, 7, 'SAFTI'),
+                                                                 wpNode_noCheck(vehicle, 8, 'TESTA'),
+                                                                 wpNode_noCheck(vehicle, 9, 'Landing')])
 
 root = py_trees.composites.Sequence(name="OPS",
                                     children=[preflight,
@@ -116,8 +126,8 @@ for ii in range(300):
     print("+++++++++++++++++++++")
     behaviour_tree.tick()
     unicode_tree = py_trees.display.unicode_tree(behaviour_tree.root,
-                                             visited=snapshot_visitor.visited,
-                                             previously_visited=snapshot_visitor.visited)
+                                            visited=snapshot_visitor.visited,
+                                            previously_visited=snapshot_visitor.visited)
     print(unicode_tree)
     # pause
     time.sleep(1)

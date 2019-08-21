@@ -6,6 +6,32 @@ import os
 from dronekit import connect, VehicleMode, LocationGlobal, LocationGlobalRelative
 from pymavlink import mavutil
 from mission_utility import upload_mission, readmission
+import pyttsx3
+from queue import Queue
+import threading
+import time
+
+class VoiceAssistant(threading.Thread):
+    def __init__(self):
+        super(VoiceAssistant, self).__init__()
+        self.engine = pyttsx3.init()
+        #self.engine.startLoop(False)
+        self.q = Queue()
+        self.daemon = True
+
+    def add_say(self, msg):
+        self.q.put(msg)
+        print("[add_say] Adding: \"" + msg + "\"")
+
+    def run(self):
+        while True:
+            self.engine.say(self.q.get())
+            self.engine.startLoop(False)
+            
+            self.engine.iterate()
+            time.sleep(1)
+            self.engine.endLoop()
+            self.q.task_done()
 
 class SetParam(py_trees.behaviour.Behaviour):
 
@@ -161,23 +187,21 @@ class SimpleTakeoff(py_trees.behaviour.Behaviour):
 
 class PlaySound(py_trees.behaviour.Behaviour):
 
-    def __init__(self, filename):
-        super(PlaySound, self).__init__("%s" % filename)
-        self._filename = filename
+    def __init__(self, msg, voiceAst, returnFailure=None):
+        super(PlaySound, self).__init__("%s" % msg)
+        self._msg = msg
+        self._voiceAst = voiceAst
+        self._returnFailure = returnFailure
 
     def update(self):
-        os.system("cat %s > /dev/dsp" % self._filename)
-        return py_trees.common.Status.SUCCESS
+        print("[WarningSound::update] Adding: \"" + self._msg + "\"")
+        # Adding message to the Voice Assistant queue
+        self._voiceAst.add_say(self._msg)
 
-class WarningSound(py_trees.behaviour.Behaviour):
-
-    def __init__(self, filename):
-        super(WarningSound, self).__init__("%s" % filename)
-        self._filename = filename
-
-    def update(self):
-        os.system("cat %s > /dev/dsp" % self._filename)
-        return py_trees.common.Status.FAILURE
+        if self._returnFailure:
+            return py_trees.common.Status.FAILURE
+        else:
+            return py_trees.common.Status.SUCCESS
 
 class AltGlobalAbove(py_trees.behaviour.Behaviour):
 
