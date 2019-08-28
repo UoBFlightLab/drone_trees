@@ -10,6 +10,8 @@ from mission_utility import *
 import pyttsx3
 from queue import Queue
 import threading
+from tkinter import *
+import signal
 
 
 # Connect to the Vehicle.
@@ -27,6 +29,21 @@ except socket.error as e:
 va = VoiceAssistant()
 # Starting Voice Assistant Thread
 va.start()
+
+def cleanup():
+    global va
+    global vehicle
+    va.kill()
+    va.join()
+    vehicle.close()
+    sys.exit()
+
+def handler(signum, frame):
+    print('Signal handler called with signal', signum)
+    cleanup()
+
+signal.signal(signal.SIGINT, handler)
+
 # build tree
 
 # pre-flight
@@ -133,4 +150,4 @@ for ii in range(300):
     time.sleep(1)
 
 # Close vehicle object before exiting script
-vehicle.close()
+cleanup()
