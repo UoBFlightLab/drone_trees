@@ -59,12 +59,11 @@ def readmission(vehicle, aFileName):
     return missionlist
 
 
-def download_mission():
+def download_mission(vehicle):
     """
     Downloads the current mission and returns it in a list.
     It is used in save_mission() to get the file information to save.
     """
-    print(" Download mission from vehicle")
     missionlist=[]
     cmds = vehicle.commands
     cmds.download()
