@@ -149,7 +149,7 @@ class CheckLanding(py_trees.behaviour.Behaviour):
 class SetCounter(py_trees.behaviour.Behaviour):
 
     def __init__(self, vehicle, wpn):
-        super(SetCounter, self).__init__("Set wp counter to %i" % wpn)
+        super(SetCounter, self).__init__("Set WP Counter to %i" % wpn)
         self._vehicle = vehicle
         self._wpn = wpn
 
@@ -389,7 +389,10 @@ def at_wp(vehicle, va, wp_n):
 def leg_handler(vehicle, va, wp_n, name, precond_next_wp=py_trees.behaviours.Dummy(name="Precond Check")):
 
     precond_inverter = py_trees.decorators.Inverter(precond_next_wp, name="Precond Inverter")
-    precond_priority = py_trees.composites.Selector(name="Precond Priority", children=[precond_inverter, SetCounter(vehicle, (wp_n + 1))])
+    wait_then_set_ctr = py_trees.composites.Sequence(name="Wait then Set CTR to %i"  % (wp_n+1))
+    wait_then_set_ctr.add_children([py_trees.timers.Timer(), SetCounter(vehicle, (wp_n + 1))])
+    wait_then_set_ctr.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
+    precond_priority = py_trees.composites.Selector(name="Precond Priority", children=[precond_inverter, wait_then_set_ctr])
     bt = py_trees.composites.Sequence(name=('Leg Handler %i' % wp_n),
                                       children=[at_wp(vehicle, va, wp_n),
                                       precond_priority])
@@ -419,11 +422,10 @@ def wait_resolve_or_goSafti(vehicle, va, wp_n, safti_wp_n,
                             cond, mishab_tts, recov_tts, 
                             name="Stop Resolve or Go SAFTI"):
 
-    wait_at_wp = py_trees.decorators.Inverter(SetCounter(vehicle, wp_n))
-    fr_cond = py_trees.decorators.FailureIsRunning(cond)
-    timeout_sq = py_trees.decorators.Timeout(py_trees.composites.Sequence(children=[fr_cond, PlaySound(recov_tts, va)]), duration=20)
+    wait_at_wp = py_trees.decorators.SuccessIsRunning(SetCounter(vehicle, wp_n))
+    timeout_wait = py_trees.decorators.Timeout(wait_at_wp, duration=20)
     selector = py_trees.composites.Selector(name="Fallback Priority")
-    selector.add_children([wait_at_wp, timeout_sq, go_SAFTI(vehicle, va, safti_wp_n)])
+    selector.add_children([timeout_wait, go_SAFTI(vehicle, va, safti_wp_n)])
 
     sq = py_trees.composites.Sequence(name=name)
     sq.add_children([PlaySound(mishab_tts, va), selector])
