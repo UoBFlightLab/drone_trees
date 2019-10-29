@@ -35,7 +35,7 @@ class VoiceAssistant(threading.Thread):
                 self._engine.say(self._q.get(False))
                 self._engine.startLoop(False)
                 self._engine.iterate()
-                time.sleep(0.5)
+                time.sleep(1)
                 self._engine.endLoop()
                 self._q.task_done()
             except queue.Empty as e:
@@ -438,7 +438,7 @@ def take_off(vehicle, va):
     
     sq = py_trees.composites.Sequence(name="Take-off")
     finished_tko = py_trees.decorators.FailureIsRunning(CheckCounter(vehicle, 2))
-    sq.add_children([CheckCounter(vehicle, 1), finished_tko, PlaySound("Take-off completed", va)])
+    sq.add_children([CheckCounterLessThan(vehicle, 2), finished_tko, PlaySound("Take-off completed", va)])
 
     sq.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
 
