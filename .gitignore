@@ -9,3 +9,4 @@ venv/*
 .vscode/settings.json
 seg1.txt
 test.py
+TestSuite/Test_Results/

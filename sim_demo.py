@@ -31,7 +31,7 @@ def cleanup():
     global va
     global vehicle
     va.kill()
-    va.join()
+    #va.join()
     vehicle.close()
     sys.exit()
 

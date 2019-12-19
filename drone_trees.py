@@ -11,19 +11,17 @@ import queue
 from queue import Queue
 import threading
 import time
-import tkinter as tk
 
 class VoiceAssistant(threading.Thread):
     def __init__(self):
-        super(VoiceAssistant, self).__init__()
+        super(VoiceAssistant, self).__init__(daemon=True)
         self._engine = pyttsx3.init()
         self._q = Queue()
-        self._daemon = True
         self._loop_should_exit = False
     
     def kill(self):
         self._loop_should_exit = True
-        print('--------Kill-----------')
+        print('----------Kill-----------')
 
     def add_say(self, msg):
         self._q.put(msg)
@@ -438,7 +436,8 @@ def take_off(vehicle, va):
     
     sq = py_trees.composites.Sequence(name="Take-off")
     finished_tko = py_trees.decorators.FailureIsRunning(CheckCounter(vehicle, 2))
-    sq.add_children([CheckCounterLessThan(vehicle, 2), finished_tko, PlaySound("Take-off completed", va)])
+    oneShot_playSound = py_trees.decorators.OneShot(PlaySound("Take-off completed", va))
+    sq.add_children([CheckCounterLessThan(vehicle, 2), finished_tko, oneShot_playSound])
 
     sq.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
 
