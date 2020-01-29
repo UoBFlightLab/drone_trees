@@ -14,11 +14,15 @@ except socket.error as e:
     # proceed just with a blank object so I can render the tree
     vehicle=None
 
-# Wait for the vehicle to be armed and flying towards waypoint 4
-while not (vehicle.is_armable and vehicle.commands.next == 4):
+# Wait for the vehicle to be armed and flying towards waypoint 5
+while not (vehicle.is_armable and vehicle.commands.next > 3):
     time.sleep(1)
 
-# Set distance sensor reading to 1m by varying the scaling
-vehicle.parameters['RNGFND2_SCALING']=0.2
+# Set mode to guided whilst battery level is above 31%
+while vehicle.battery.level > 31:
+    vehicle.mode = 'GUIDED'
+    time.sleep(1)
+
+vehicle.mode = 'AUTO'
 
 vehicle.close()

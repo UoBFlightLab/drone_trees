@@ -32,6 +32,7 @@ def cleanup():
     global vehicle
     va.kill()
     #va.join()
+    l.terminate()
     vehicle.close()
     sys.exit()
 
@@ -45,7 +46,7 @@ signal.signal(signal.SIGINT, handler)
 
 # pre-flight
 
-SAFTI = 7 # SAFTI waypint number
+SAFTI = 11 # SAFTI waypint number
 
 preflight_GPS_Check = preflight_Module(vehicle, va, 
                                         name="Preflight GPS Check",
@@ -63,11 +64,11 @@ preflight = py_trees.decorators.OneShot(py_trees.composites.Sequence(name="Pre-f
                                                                                MissionUpload(vehicle, 'seg1.txt')]))
 # Flight Manager
 
-safety_low_battery = safty_module(name="Low Battery",
-                           safety_check=BatteryLevelAbove(vehicle, 1), 
+safety_low_battery = safety_module(name="Low Battery",
+                           safety_check=BatteryLevelAbove(vehicle, 30), 
                            fallback=go_SAFTI(vehicle, va, SAFTI, "Low Battery"))
 
-safety_obstacle_check = safty_module(name="Obstacle Check", 
+safety_obstacle_check = safety_module(name="Obstacle Check", 
                               safety_check=CheckObstacle(vehicle, 2),
                               fallback=go_SAFTI(vehicle, va, SAFTI, "Obstacle Ahead"))
 
@@ -81,16 +82,21 @@ def wp_precond_rtk_check(wp_n):
                          fallback=rtk_wait_and_resolve)
     return rtk_check
 
+def wp_precond_clearance(wp_clearance):
+    precond = precond_module(name="WP Clearance", 
+                        safety_check=CheckObstacle(vehicle, wp_clearance),
+                        fallback=go_SAFTI(vehicle, va, SAFTI, "Clearance Fail"))
+    return precond
 
 flight_manager = flight_manager(vehicle, va,
-                safty_modules=[safety_low_battery, safety_obstacle_check],
+                safety_modules=[safety_low_battery, safety_obstacle_check],
                 legs=[at_wp(vehicle, va, 2),
-                      leg_handler(vehicle, va, 3, "SAFTI", precond_next_wp=wp_precond_rtk_check(3)),
-                      leg_handler(vehicle, va, 4, "TWENTI", precond_next_wp=wp_precond_rtk_check(4)),
-                      leg_handler(vehicle, va, 5, "TENNA", precond_next_wp=wp_precond_rtk_check(5)),
-                      leg_handler(vehicle, va, 6, "ALPHA", precond_next_wp=wp_precond_rtk_check(6)),
-                      at_wp(vehicle, va, 7),
-                      at_wp(vehicle, va, 8)])
+                      leg_handler(vehicle, va, 3, "SAFTI", precond_next_wp=[wp_precond_rtk_check(3), wp_precond_clearance(45)]),
+                      leg_handler(vehicle, va, 5, "TWENTI", precond_next_wp=[wp_precond_rtk_check(4), wp_precond_clearance(15)]),
+                      leg_handler(vehicle, va, 7, "TENNA", precond_next_wp=[wp_precond_rtk_check(5), wp_precond_clearance(8)]),
+                      leg_handler(vehicle, va, 9, "ALPHA", precond_next_wp=[wp_precond_rtk_check(6), wp_precond_clearance(4)]),
+                      at_wp(vehicle, va, 11),
+                      at_wp(vehicle, va, 12)])
 
 root = py_trees.composites.Sequence(name="OPS",
                                     children=[preflight,
@@ -107,6 +113,9 @@ behaviour_tree = py_trees.trees.BehaviourTree(root)
 snapshot_visitor = py_trees.visitors.SnapshotVisitor()
 behaviour_tree.visitors.append(snapshot_visitor)
 
+# Initiate Log
+l = log(root, sys.argv[1])
+
 # run the thing
 # and every second for five minutes, print stuff
 for ii in range(300):
@@ -122,6 +131,8 @@ for ii in range(300):
                                             visited=snapshot_visitor.visited,
                                             previously_visited=snapshot_visitor.visited)
     print(unicode_tree)
+    # log
+    l.logging(ii)
     # pause
     time.sleep(1)
 

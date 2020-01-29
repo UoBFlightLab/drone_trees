@@ -30,6 +30,7 @@ vehicle.simple_takeoff(5)
 
 time.sleep(10)
 # Change mode to auto
+vehicle.parameters['SIM_SPEEDUP']=1
 vehicle.mode = 'AUTO'
 
 vehicle.close()

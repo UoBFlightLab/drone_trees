@@ -39,6 +39,27 @@ class VoiceAssistant(threading.Thread):
             except queue.Empty as e:
                 pass
 
+class log:
+    def __init__(self, root, path):
+        super(log, self).__init__()
+        self._root = root
+        self._path = path
+        
+        # Make HTML file for the html log
+        self._bt_log_path = os.path.join(self._path, 'BT')
+        self._filename = os.path.join(self._bt_log_path, 'bt_log.html')
+        self._f = open(self._filename, 'w')
+        self._f.write('<html><head><title>Foo</title><body>')
+
+    def logging(self, iteration):
+        self._f.write("<p>******************** %i ********************</p>" % iteration)
+        self._f.write(py_trees.display.xhtml_tree(self._root, show_status=True))
+        py_trees.display.render_dot_tree(self._root, name='Sim_Demo_%i' % iteration, target_directory=self._bt_log_path)
+
+    def terminate(self):
+        self._f.write("</body></html>")
+        self._f.close()
+
 class SetParam(py_trees.behaviour.Behaviour):
 
     def __init__(self, vehicle, param_name, new_value):
@@ -70,7 +91,7 @@ class ChangeMode(py_trees.behaviour.Behaviour):
 class CheckGPS(py_trees.behaviour.Behaviour):
 
     def __init__(self, vehicle, fixType):
-        super(CheckGPS, self).__init__("GPS Status Check > %i" % fixType)
+        super(CheckGPS, self).__init__("GPS Status Check > %i?" % fixType)
         self._vehicle = vehicle
         self._fixType = fixType
 
@@ -83,7 +104,7 @@ class CheckGPS(py_trees.behaviour.Behaviour):
 class CheckObstacle(py_trees.behaviour.Behaviour):
 
     def __init__(self, vehicle, clearance):
-        super(CheckObstacle, self).__init__("Clearance > %i" % clearance)
+        super(CheckObstacle, self).__init__("Clearance > %i ?" % clearance)
         self._vehicle = vehicle
         self._clearance = clearance
 
@@ -279,7 +300,7 @@ class AltLocalAbove(py_trees.behaviour.Behaviour):
 class BatteryLevelAbove(py_trees.behaviour.Behaviour):
 
     def __init__(self, vehicle, level):
-        super(BatteryLevelAbove, self).__init__("Bat over %f pc" % level)
+        super(BatteryLevelAbove, self).__init__(f"Battery over {level}% ?")
         self._vehicle = vehicle
         self._level = level
         
@@ -375,7 +396,7 @@ def go_SAFTI(vehicle, va, safti_wp_n, tts="Go SAFTI"):
     return bt
 
 def at_wp(vehicle, va, wp_n):
-    at_wp = py_trees.composites.Sequence(name=('At Waypoint %i' % wp_n),
+    at_wp = py_trees.composites.Sequence(name=('At Waypoint %i ?' % wp_n),
                                          children=[CheckCounter(vehicle, wp_n),
                                                    py_trees.decorators.FailureIsRunning(py_trees.decorators.Inverter(LatSpeedUnder(vehicle,1.0))),
                                                    py_trees.decorators.FailureIsRunning(LatSpeedUnder(vehicle, 1)),
@@ -384,20 +405,23 @@ def at_wp(vehicle, va, wp_n):
     at_wp.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
     return at_wp
 
-def leg_handler(vehicle, va, wp_n, name, precond_next_wp=py_trees.behaviours.Dummy(name="Precond Check")):
+def leg_handler(vehicle, va, wp_n, name, precond_next_wp=[py_trees.behaviours.Dummy(name="Precond Check")]):
 
-    precond_inverter = py_trees.decorators.Inverter(precond_next_wp, name="Precond Inverter")
-    wait_then_set_ctr = py_trees.composites.Sequence(name="Wait then Set CTR to %i"  % (wp_n+1))
-    wait_then_set_ctr.add_children([py_trees.timers.Timer(), SetCounter(vehicle, (wp_n + 1))])
+    precond_priority = py_trees.composites.Selector(name="Precond Priority")
+    for precond in precond_next_wp:
+        precond_priority.add_child(py_trees.decorators.Inverter(precond, name="Precond Inverter"))
+
+    wait_then_set_ctr = py_trees.composites.Sequence(name="Wait then Set CTR to %i"  % (wp_n+2))
+    wait_then_set_ctr.add_children([py_trees.timers.Timer(), SetCounter(vehicle, (wp_n + 2))])
     wait_then_set_ctr.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
-    precond_priority = py_trees.composites.Selector(name="Precond Priority", children=[precond_inverter, wait_then_set_ctr])
+    precond_priority.add_child(wait_then_set_ctr)
     bt = py_trees.composites.Sequence(name=('Leg Handler %i' % wp_n),
                                       children=[at_wp(vehicle, va, wp_n),
                                       precond_priority])
     return bt
 
 def precond_module(
-        name="Safety Module",
+        name="Precond Module",
         safety_check=py_trees.behaviours.Dummy(name="Safety Check"),
         fallback=py_trees.behaviours.Dummy(name="Fallback")
         ):
@@ -406,7 +430,7 @@ def precond_module(
     
     return bt
 
-def safty_module(
+def safety_module(
         name="Safety Module",
         safety_check=py_trees.behaviours.Dummy(name="Safety Check"),
         fallback=py_trees.behaviours.Dummy(name="Fallback")
@@ -434,7 +458,7 @@ def wait_resolve_or_goSafti(vehicle, va, wp_n, safti_wp_n,
 
 def take_off(vehicle, va):
     
-    sq = py_trees.composites.Sequence(name="Take-off")
+    sq = py_trees.composites.Sequence(name="Take-off Completed?")
     finished_tko = py_trees.decorators.FailureIsRunning(CheckCounter(vehicle, 2))
     oneShot_playSound = py_trees.decorators.OneShot(PlaySound("Take-off completed", va))
     sq.add_children([CheckCounterLessThan(vehicle, 2), finished_tko, oneShot_playSound])
@@ -446,7 +470,7 @@ def take_off(vehicle, va):
 
 def landing(vehicle, va):
 
-    sq = py_trees.composites.Sequence(name="Landing")
+    sq = py_trees.composites.Sequence(name="Landing Completed?")
     landed = py_trees.decorators.FailureIsRunning(py_trees.decorators.Inverter(AltLocalAbove(vehicle, 0.5)))
     oneShot_playSound = py_trees.decorators.OneShot(PlaySound("Landed", va))
 
@@ -459,27 +483,24 @@ def landing(vehicle, va):
 
 def flight_manager(vehicle, va,
         name="Flight Manager",
-        safty_modules=[py_trees.behaviours.Dummy(name="Safety Module 1"),  # dummy behaviours to enable dot rendering with py-trees-render
+        safety_modules=[py_trees.behaviours.Dummy(name="Safety Module 1"),  # dummy behaviours to enable dot rendering with py-trees-render
                        py_trees.behaviours.Dummy(name="Safety Module 2")],
         legs=[py_trees.behaviours.Dummy(name="Leg 1"),  # dummy behaviours to enable dot rendering with py-trees-render
-                   py_trees.behaviours.Dummy(name="Leg 2 2")]
+                   py_trees.behaviours.Dummy(name="Leg 2")]
         ):
     # Consruct Safety Branch
     fm = py_trees.composites.Selector(name=name)
     safety_parallel = py_trees.composites.Parallel(name="Safety Parallel")
     # Add safety modules
-    for sm in safty_modules:
+    for sm in safety_modules:
         safety_parallel.add_child(sm)
     
     
     invtr_plus_parallel = py_trees.decorators.Inverter(child=safety_parallel, name="Safety Inverter")
 
     # Construct Waypoint Branch
-    mission_handler = py_trees.composites.Parallel(name="Mission Handler")
-    for leg in legs:
-        wrap=py_trees.decorators.OneShot(py_trees.decorators.FailureIsRunning(leg))
-        mission_handler.add_child(wrap)
-    
+    wrap=[py_trees.decorators.OneShot(py_trees.decorators.FailureIsRunning(leg)) for leg in legs]
+    mission_handler = py_trees.composites.Parallel(name="Mission Handler", policy=py_trees.common.ParallelPolicy.SuccessOnSelected(children=[wrap[-1]]), children=wrap) 
     fm.add_children([take_off(vehicle, va), landing(vehicle, va), invtr_plus_parallel, mission_handler])
-
+    
     return fm

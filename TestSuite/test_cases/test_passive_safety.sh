@@ -4,10 +4,11 @@
 ARDUPILOT_PATH=/home/hirad/ardupilot
 
 # Get the testcase to run
-TESTCASE_PATH=$1
-filename=$(basename "$TESTCASE_PATH")
-test_case="${filename%.*}"
+#TESTCASE_PATH=$1
+filename=test_case_01.py
+test_case="passive_safety"
 
+cd ../
 # Make a test results directory if one doesn't exist
 mkdir -p -- Test_Results
 cd Test_Results
@@ -37,4 +38,4 @@ python3 $filename &
 cd ../../
 
 # Run BT
-python3 sim_demo.py TestSuite/Test_Results/$test_case/$simDate
+timeout 1.5m python3 sim_demo.py TestSuite/Test_Results/$test_case/$simDate
