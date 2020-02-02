@@ -396,9 +396,10 @@ def go_SAFTI(vehicle, va, safti_wp_n, tts="Go SAFTI"):
     return bt
 
 def at_wp(vehicle, va, wp_n):
-    at_wp = py_trees.composites.Sequence(name=('At Waypoint %i ?' % wp_n),
+    at_wp = py_trees.composites.Sequence(name=("Is vehicle at\n waypoint %i ?" % wp_n),
                                          children=[CheckCounter(vehicle, wp_n),
                                                    py_trees.decorators.FailureIsRunning(py_trees.decorators.Inverter(LatSpeedUnder(vehicle,1.0))),
+                                                   CheckCounter(vehicle, wp_n),
                                                    py_trees.decorators.FailureIsRunning(LatSpeedUnder(vehicle, 1)),
                                                    CheckCounter(vehicle, wp_n),
                                                    PlaySound(("Waypoint %i" % wp_n), va)])
@@ -407,15 +408,15 @@ def at_wp(vehicle, va, wp_n):
 
 def leg_handler(vehicle, va, wp_n, name, precond_next_wp=[py_trees.behaviours.Dummy(name="Precond Check")]):
 
-    precond_priority = py_trees.composites.Selector(name="Precond Priority")
+    precond_priority = py_trees.composites.Selector(name="WP {} Preconds".format(wp_n + 2))
     for precond in precond_next_wp:
-        precond_priority.add_child(py_trees.decorators.Inverter(precond, name="Precond Inverter"))
+        precond_priority.add_child(py_trees.decorators.Inverter(precond))
 
     wait_then_set_ctr = py_trees.composites.Sequence(name="Wait then Set CTR to %i"  % (wp_n+2))
     wait_then_set_ctr.add_children([py_trees.timers.Timer(), SetCounter(vehicle, (wp_n + 2))])
     wait_then_set_ctr.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
     precond_priority.add_child(wait_then_set_ctr)
-    bt = py_trees.composites.Sequence(name=('Leg Handler %i' % wp_n),
+    bt = py_trees.composites.Sequence(name=("Leg Handler {}".format(int(((wp_n-1)/2)))),
                                       children=[at_wp(vehicle, va, wp_n),
                                       precond_priority])
     return bt
@@ -458,7 +459,7 @@ def wait_resolve_or_goSafti(vehicle, va, wp_n, safti_wp_n,
 
 def take_off(vehicle, va):
     
-    sq = py_trees.composites.Sequence(name="Take-off Completed?")
+    sq = py_trees.composites.Sequence(name="Is take-off complete?")
     finished_tko = py_trees.decorators.FailureIsRunning(CheckCounter(vehicle, 2))
     oneShot_playSound = py_trees.decorators.OneShot(PlaySound("Take-off completed", va))
     sq.add_children([CheckCounterLessThan(vehicle, 2), finished_tko, oneShot_playSound])
@@ -470,15 +471,17 @@ def take_off(vehicle, va):
 
 def landing(vehicle, va):
 
-    sq = py_trees.composites.Sequence(name="Landing Completed?")
+    sq = py_trees.composites.Sequence(name="landing Handler")
     landed = py_trees.decorators.FailureIsRunning(py_trees.decorators.Inverter(AltLocalAbove(vehicle, 0.5)))
     oneShot_playSound = py_trees.decorators.OneShot(PlaySound("Landed", va))
 
     sq.add_children([CheckLanding(vehicle), landed, oneShot_playSound])
 
-    sq.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
+    lnd = py_trees.decorators.FailureIsRunning(sq, name="Is landing complete?")
 
-    return sq
+    lnd.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
+
+    return lnd
 
 
 def flight_manager(vehicle, va,
@@ -496,11 +499,11 @@ def flight_manager(vehicle, va,
         safety_parallel.add_child(sm)
     
     
-    invtr_plus_parallel = py_trees.decorators.Inverter(child=safety_parallel, name="Safety Inverter")
+    invtr_plus_parallel = py_trees.decorators.Inverter(child=safety_parallel)
 
     # Construct Waypoint Branch
-    wrap=[py_trees.decorators.OneShot(py_trees.decorators.FailureIsRunning(leg)) for leg in legs]
+    wrap=[py_trees.decorators.OneShot(py_trees.decorators.FailureIsRunning(leg, name="F=R {}".format(legs.index(leg)+1)), name="OneShot {}".format(legs.index(leg)+1)) for leg in legs]
     mission_handler = py_trees.composites.Parallel(name="Mission Handler", policy=py_trees.common.ParallelPolicy.SuccessOnSelected(children=[wrap[-1]]), children=wrap) 
-    fm.add_children([take_off(vehicle, va), landing(vehicle, va), invtr_plus_parallel, mission_handler])
+    fm.add_children([invtr_plus_parallel, mission_handler])
     
     return fm

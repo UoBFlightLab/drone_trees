@@ -58,10 +58,10 @@ preflight_EKF_Check = preflight_Module(vehicle, va,
                                         safety_check=CheckEKF(vehicle),
                                         fallback=PlaySound('Bad EKF', va, returnFailure=True))
 
-preflight = py_trees.decorators.OneShot(py_trees.composites.Sequence(name="Pre-flight",
+preflight = py_trees.composites.Sequence(name="Pre-flight",
                                                                      children=[preflight_GPS_Check,
                                                                                preflight_EKF_Check,
-                                                                               MissionUpload(vehicle, 'seg1.txt')]))
+                                                                               MissionUpload(vehicle, 'seg1.txt')])
 # Flight Manager
 
 safety_low_battery = safety_module(name="Low Battery",
@@ -80,12 +80,16 @@ def wp_precond_rtk_check(wp_n):
     rtk_check = precond_module(name="RTK Check",
                          safety_check=CheckGPS(vehicle, 5),
                          fallback=rtk_wait_and_resolve)
+    
+    rtk_check.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
     return rtk_check
 
 def wp_precond_clearance(wp_clearance):
-    precond = precond_module(name="WP Clearance", 
+    precond = precond_module(name=f"WP Clearance > {wp_clearance}?", 
                         safety_check=CheckObstacle(vehicle, wp_clearance),
                         fallback=go_SAFTI(vehicle, va, SAFTI, "Clearance Fail"))
+    
+    precond.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
     return precond
 
 flight_manager = flight_manager(vehicle, va,
@@ -99,8 +103,10 @@ flight_manager = flight_manager(vehicle, va,
                       at_wp(vehicle, va, 12)])
 
 root = py_trees.composites.Sequence(name="OPS",
-                                    children=[preflight,
-                                              flight_manager])
+                                    children=[py_trees.decorators.OneShot(preflight, name="OneShot \n Pre-flight"),
+                                              py_trees.decorators.OneShot(take_off(vehicle, va), name="OneShot \n Take-off"),
+                                              py_trees.decorators.OneShot(flight_manager, name="OneShot \n Flight Manager"),
+                                              py_trees.decorators.OneShot(landing(vehicle, va), name="OneShot \n Landing")])
 # piccies
 py_trees.display.render_dot_tree(root, name='Sim_Demo')
 
