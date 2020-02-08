@@ -3,9 +3,8 @@
 import py_trees
 import math
 import os
-from dronekit import connect, VehicleMode, LocationGlobal, LocationGlobalRelative
+from dronekit import connect, VehicleMode, LocationGlobal, LocationGlobalRelative, Command
 from pymavlink import mavutil
-from mission_utility import upload_mission, readmission, download_mission
 import pyttsx3
 import queue
 from queue import Queue
@@ -38,6 +37,102 @@ class VoiceAssistant(threading.Thread):
                 self._q.task_done()
             except queue.Empty as e:
                 pass
+
+class Mission_Utility:
+    
+    def __init__(self, vehicle, aFileName):
+        super(Mission_Utility, self).__init__()
+        self._aFileName = aFileName
+        self._vehicle = vehicle
+        self._cmds = self._vehicle.commands
+        
+
+    def readmission(self):
+        """
+        Load a mission from a file into a list. The mission definition is in the Waypoint file
+        format (http://qgroundcontrol.org/mavlink/waypoint_protocol#waypoint_file_format).
+
+        This function is used by upload_mission().
+        """
+        print("\nReading mission from file: %s" % self._aFileName)
+        #cmds = self._vehicle.commands
+        missionlist=[]
+        with open(self._aFileName) as f:
+            for i, line in enumerate(f):
+                if i==0:
+                    if not line.startswith('QGC WPL 110'):
+                        raise Exception('File is not supported WP version')
+                else:
+                    linearray=line.split('\t')
+                    ln_index=int(linearray[0])
+                    ln_currentwp=int(linearray[1])
+                    ln_frame=int(linearray[2])
+                    ln_command=int(linearray[3])
+                    ln_param1=float(linearray[4])
+                    ln_param2=float(linearray[5])
+                    ln_param3=float(linearray[6])
+                    ln_param4=float(linearray[7])
+                    ln_param5=float(linearray[8])
+                    ln_param6=float(linearray[9])
+                    ln_param7=float(linearray[10])
+                    ln_autocontinue=int(linearray[11].strip())
+                    cmd = Command( 0, 0, 0, ln_frame, ln_command, ln_currentwp, ln_autocontinue, ln_param1, ln_param2, ln_param3, ln_param4, ln_param5, ln_param6, ln_param7)
+                    missionlist.append(cmd)
+        return missionlist
+
+    def gen_exe_mission(self, safti_wp):
+        # Read the mission file
+        missionlist = self.readmission()
+
+        input_wp_len = len(missionlist)
+        new_safti = float(safti_wp) + float(input_wp_len-5) 
+        j = 3
+        while j <= input_wp_len:
+            cmd = Command( 0, 0, 0, 3, 177, 0, 1, new_safti, 5.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+            missionlist.insert(j, cmd)
+            j+=2
+
+        output='QGC WPL 110\n'
+        for cmd in missionlist:
+            commandline="%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (cmd.seq,cmd.current,cmd.frame,cmd.command,cmd.param1,cmd.param2,cmd.param3,cmd.param4,cmd.x,cmd.y,cmd.z,cmd.autocontinue)
+            output+=commandline
+        with open('output_mission.txt', 'w') as file_:
+            print(" Write mission to file")
+            file_.write(output)
+
+
+    def upload_mission(self, mission_file):
+        """
+        Upload a mission from a file. 
+        """
+        #Read mission from file
+        missionlist = self.readmission()
+
+        print("\nUpload mission from a file: %s" % mission_file)
+        #Clear existing mission from vehicle
+        print(' Clear mission')
+        #cmds = self._vehicle.commands
+        self._cmds.clear()
+        #Add new mission to vehicle
+        for command in missionlist:
+            self._cmds.add(command)
+        print(' Upload mission')
+        #self._vehicle.commands.upload()
+        self._cmds.upload()
+        return py_trees.common.Status.SUCCESS
+
+
+class MissionUpload(py_trees.behaviour.Behaviour):
+
+    def __init__(self, vehicle, mission_file):
+        super(MissionUpload, self).__init__('Mission Upload')
+        self._vehicle = vehicle
+        self._mission_file = mission_file
+        self._mu = Mission_Utility(self._vehicle, self._mission_file)
+        
+    def update(self):
+        self._mu.upload_mission(self._mission_file)
+        return py_trees.common.Status.SUCCESS
 
 class log:
     def __init__(self, root, path):
@@ -185,17 +280,6 @@ class GoSAFTI(py_trees.behaviour.Behaviour):
 
     def update(self):
         self._vehicle.commands.next = self._wpn
-        return py_trees.common.Status.SUCCESS
-
-class MissionUpload(py_trees.behaviour.Behaviour):
-
-    def __init__(self, vehicle, mission_file):
-        super(MissionUpload, self).__init__('Mission Upload')
-        self._vehicle = vehicle
-        self._mission_file = mission_file
-        
-    def update(self):
-        upload_mission(self._vehicle, self._mission_file)
         return py_trees.common.Status.SUCCESS
 
 class CheckMode(py_trees.behaviour.Behaviour):
@@ -507,3 +591,42 @@ def flight_manager(vehicle, va,
     fm.add_children([invtr_plus_parallel, mission_handler])
     
     return fm
+
+"""
+Class Flight_Manager(py_trees.behaviour.Behaviour):
+    def __init__(self, vehicle, va, safety_modules, legs):
+
+        super(SetCounter, self).__init__("Set WP Counter to %i" % wpn)
+        self._vehicle = vehicle
+        self._va = va
+        self._safety_modules = safety_modules
+        self._legs = legs
+
+        # Consruct Safety Branch
+        self._fm = py_trees.composites.Selector(name=name)
+        safety_parallel = py_trees.composites.Parallel(name="Safety Parallel")
+        # Add safety modules
+        for sm in self._safety_modules:
+            safety_parallel.add_child(sm)
+
+        invtr_plus_parallel = py_trees.decorators.Inverter(child=safety_parallel)
+
+    def leg_handler(wp_n, precond_next_wp=[py_trees.behaviours.Dummy(name="Precond Check")]):
+
+        precond_priority = py_trees.composites.Selector(name="WP {} Preconds".format(wp_n + 2))
+        for precond in precond_next_wp:
+            precond_priority.add_child(py_trees.decorators.Inverter(precond))
+
+        wait_then_set_ctr = py_trees.composites.Sequence(name="Wait then Set CTR to %i"  % (wp_n+2))
+        wait_then_set_ctr.add_children([py_trees.timers.Timer(), SetCounter(self._vehicle, (wp_n + 2))])
+        wait_then_set_ctr.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
+        precond_priority.add_child(wait_then_set_ctr)
+        bt = py_trees.composites.Sequence(name=("Leg Handler {}".format(int(((wp_n-1)/2)))),
+                                        children=[at_wp(self._vehicle, self._va, wp_n),
+                                        precond_priority])
+    
+    def update(self):
+        self._vehicle.commands.next = self._wpn
+        return py_trees.common.Status.SUCCESS
+"""
+

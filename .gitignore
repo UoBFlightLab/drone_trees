@@ -8,5 +8,6 @@ terrain/**
 venv/*
 .vscode/settings.json
 seg1.txt
+seg2.txt
 test.py
 TestSuite/Test_Results/

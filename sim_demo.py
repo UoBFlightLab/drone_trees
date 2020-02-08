@@ -1,10 +1,9 @@
 import py_trees
 import time
 import socket
+import sys
 from drone_trees import *
-from battery_caller import battery_caller
 from dronekit import connect
-from mission_utility import *
 import pyttsx3
 from queue import Queue
 import threading
@@ -26,6 +25,10 @@ except socket.error as e:
 va = VoiceAssistant()
 # Starting Voice Assistant Thread
 va.start()
+
+# Generate executable mission file
+m = Mission_Utility(vehicle, "seg2.txt")
+m.gen_exe_mission(7)
 
 def cleanup():
     global va
@@ -59,9 +62,9 @@ preflight_EKF_Check = preflight_Module(vehicle, va,
                                         fallback=PlaySound('Bad EKF', va, returnFailure=True))
 
 preflight = py_trees.composites.Sequence(name="Pre-flight",
-                                                                     children=[preflight_GPS_Check,
-                                                                               preflight_EKF_Check,
-                                                                               MissionUpload(vehicle, 'seg1.txt')])
+                                         children=[preflight_GPS_Check,
+                                                   preflight_EKF_Check,
+                                                   MissionUpload(vehicle, "output_mission.txt")])
 # Flight Manager
 
 safety_low_battery = safety_module(name="Low Battery",
