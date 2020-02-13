@@ -27,8 +27,9 @@ va = VoiceAssistant()
 va.start()
 
 # Generate executable mission file
-m = Mission_Utility(vehicle, "seg2.txt")
-m.gen_exe_mission(7)
+m = MissionUtility(vehicle)
+wp_count = m.gen_exe_mission("seg2.txt", 7, 10)
+SAFTI = wp_count-2 # SAFTI waypoint number
 
 def cleanup():
     global va
@@ -49,7 +50,6 @@ signal.signal(signal.SIGINT, handler)
 
 # pre-flight
 
-SAFTI = 11 # SAFTI waypint number
 
 preflight_GPS_Check = preflight_Module(vehicle, va, 
                                         name="Preflight GPS Check",
@@ -64,31 +64,34 @@ preflight_EKF_Check = preflight_Module(vehicle, va,
 preflight = py_trees.composites.Sequence(name="Pre-flight",
                                          children=[preflight_GPS_Check,
                                                    preflight_EKF_Check,
-                                                   MissionUpload(vehicle, "output_mission.txt")])
+                                                   MissionUpload(vehicle, m, "output_mission.txt")])
 # Flight Manager
 
-safety_low_battery = safety_module(name="Low Battery",
-                           safety_check=BatteryLevelAbove(vehicle, 30), 
-                           fallback=go_SAFTI(vehicle, va, SAFTI, "Low Battery"))
+safety_low_battery = safety_module(va, name="Low Battery",
+                           safety_check=BatteryLevelAbove(vehicle, 30),
+                           mishap_tts="Low battery", 
+                           fallback=go_SAFTI(vehicle, va, SAFTI))
 
-safety_obstacle_check = safety_module(name="Obstacle Check", 
+safety_obstacle_check = safety_module(va, name="Obstacle Check", 
                               safety_check=CheckObstacle(vehicle, 2),
-                              fallback=go_SAFTI(vehicle, va, SAFTI, "Obstacle Ahead"))
+                              mishap_tts="Obstacle ahead",
+                              fallback=go_SAFTI(vehicle, va, SAFTI))
 
-
+"""
 def wp_precond_rtk_check(wp_n):
     rtk_wait_and_resolve = wait_resolve_or_goSafti(vehicle, va, wp_n, SAFTI, CheckGPS(vehicle, 5),
                                                    "No RTK Fix", "RTK Fix Recovered",
                                                     name="RTK Wait & Resolve or Go Safti")
-    rtk_check = precond_module(name="RTK Check",
+    rtk_check = precond_module(va, name="RTK Check",
                          safety_check=CheckGPS(vehicle, 5),
+                         mishab_voice="No RTK Fix"
                          fallback=rtk_wait_and_resolve)
     
     rtk_check.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
     return rtk_check
 
 def wp_precond_clearance(wp_clearance):
-    precond = precond_module(name=f"WP Clearance > {wp_clearance}?", 
+    precond = precond_module(va, name=f"WP Clearance > {wp_clearance}?", 
                         safety_check=CheckObstacle(vehicle, wp_clearance),
                         fallback=go_SAFTI(vehicle, va, SAFTI, "Clearance Fail"))
     
@@ -99,12 +102,13 @@ flight_manager = flight_manager(vehicle, va,
                 safety_modules=[safety_low_battery, safety_obstacle_check],
                 legs=[at_wp(vehicle, va, 2),
                       leg_handler(vehicle, va, 3, "SAFTI", precond_next_wp=[wp_precond_rtk_check(3), wp_precond_clearance(45)]),
-                      leg_handler(vehicle, va, 5, "TWENTI", precond_next_wp=[wp_precond_rtk_check(4), wp_precond_clearance(15)]),
-                      leg_handler(vehicle, va, 7, "TENNA", precond_next_wp=[wp_precond_rtk_check(5), wp_precond_clearance(8)]),
-                      leg_handler(vehicle, va, 9, "ALPHA", precond_next_wp=[wp_precond_rtk_check(6), wp_precond_clearance(4)]),
+                      leg_handler(vehicle, va, 5, "TWENTI", precond_next_wp=[wp_precond_rtk_check(5), wp_precond_clearance(15)]),
+                      leg_handler(vehicle, va, 7, "TENNA", precond_next_wp=[wp_precond_rtk_check(7), wp_precond_clearance(8)]),
+                      leg_handler(vehicle, va, 9, "ALPHA", precond_next_wp=[wp_precond_rtk_check(9), wp_precond_clearance(4)]),
                       at_wp(vehicle, va, 11),
                       at_wp(vehicle, va, 12)])
-
+"""
+flight_manager = fm_behaviour(vehicle, va, wp_count, safety_modules=[safety_low_battery, safety_obstacle_check])
 root = py_trees.composites.Sequence(name="OPS",
                                     children=[py_trees.decorators.OneShot(preflight, name="OneShot \n Pre-flight"),
                                               py_trees.decorators.OneShot(take_off(vehicle, va), name="OneShot \n Take-off"),

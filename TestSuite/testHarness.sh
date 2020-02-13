@@ -28,13 +28,17 @@ gnome-terminal -- $ARDUPILOT_PATH/Tools/autotest/sim_vehicle.py -v ArduCopter -f
 
 # Arm and take-off when armable
 python3 sim_takeoff.py &
+tko_pid=$!
 
 cd test_cases
 
 # Inject test-case condition  
 python3 $filename &
+tc_pid=$!
 
 cd ../../
 
 # Run BT
 python3 sim_demo.py TestSuite/Test_Results/$test_case/$simDate
+kill $tko_pid
+kill $tc_pid
