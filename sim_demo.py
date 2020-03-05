@@ -77,43 +77,13 @@ safety_obstacle_check = safety_module(va, name="Obstacle Check",
                               mishap_tts="Obstacle ahead",
                               fallback=go_SAFTI(vehicle, va, SAFTI))
 
-"""
-def wp_precond_rtk_check(wp_n):
-    rtk_wait_and_resolve = wait_resolve_or_goSafti(vehicle, va, wp_n, SAFTI, CheckGPS(vehicle, 5),
-                                                   "No RTK Fix", "RTK Fix Recovered",
-                                                    name="RTK Wait & Resolve or Go Safti")
-    rtk_check = precond_module(va, name="RTK Check",
-                         safety_check=CheckGPS(vehicle, 5),
-                         mishab_voice="No RTK Fix"
-                         fallback=rtk_wait_and_resolve)
-    
-    rtk_check.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
-    return rtk_check
 
-def wp_precond_clearance(wp_clearance):
-    precond = precond_module(va, name=f"WP Clearance > {wp_clearance}?", 
-                        safety_check=CheckObstacle(vehicle, wp_clearance),
-                        fallback=go_SAFTI(vehicle, va, SAFTI, "Clearance Fail"))
-    
-    precond.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
-    return precond
-
-flight_manager = flight_manager(vehicle, va,
-                safety_modules=[safety_low_battery, safety_obstacle_check],
-                legs=[at_wp(vehicle, va, 2),
-                      leg_handler(vehicle, va, 3, "SAFTI", precond_next_wp=[wp_precond_rtk_check(3), wp_precond_clearance(45)]),
-                      leg_handler(vehicle, va, 5, "TWENTI", precond_next_wp=[wp_precond_rtk_check(5), wp_precond_clearance(15)]),
-                      leg_handler(vehicle, va, 7, "TENNA", precond_next_wp=[wp_precond_rtk_check(7), wp_precond_clearance(8)]),
-                      leg_handler(vehicle, va, 9, "ALPHA", precond_next_wp=[wp_precond_rtk_check(9), wp_precond_clearance(4)]),
-                      at_wp(vehicle, va, 11),
-                      at_wp(vehicle, va, 12)])
-"""
 flight_manager = fm_behaviour(vehicle, va, wp_count, safety_modules=[safety_low_battery, safety_obstacle_check])
-root = py_trees.composites.Sequence(name="OPS",
-                                    children=[py_trees.decorators.OneShot(preflight, name="OneShot \n Pre-flight"),
-                                              py_trees.decorators.OneShot(take_off(vehicle, va), name="OneShot \n Take-off"),
-                                              py_trees.decorators.OneShot(flight_manager, name="OneShot \n Flight Manager"),
-                                              py_trees.decorators.OneShot(landing(vehicle, va), name="OneShot \n Landing")])
+root = py_trees.decorators.OneShot(py_trees.composites.Sequence(name="OPS",
+                                                                children=[preflight,
+                                                                          take_off(vehicle, va),
+                                                                          flight_manager,
+                                                                          landing(vehicle, va)]))
 # piccies
 py_trees.display.render_dot_tree(root, name='Sim_Demo')
 

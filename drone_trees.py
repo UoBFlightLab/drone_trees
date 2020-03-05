@@ -93,6 +93,7 @@ class MissionUtility:
         output='QGC WPL 110\n'
         for cmd in missionlist:
             cmd.param1=delay_s if cmd.command==16 else cmd.param1
+            cmd.seq=missionlist.index(cmd)+1
             commandline="%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (cmd.seq,cmd.current,cmd.frame,cmd.command,cmd.param1,cmd.param2,cmd.param3,cmd.param4,cmd.x,cmd.y,cmd.z,cmd.autocontinue)
             output+=commandline
         with open('output_mission.txt', 'w') as file_:
@@ -111,17 +112,19 @@ class MissionUtility:
         """
         #Read mission from file
         missionlist = self.readmission(mission_file)
-
+        #missionlist_indexed=[]
+        #for cmd in missionlist:
+        #    cmd.seq=(missionlist.index(cmd)+1)
+        #    missionlist_indexed.append(cmd)
         print("\nUpload mission from a file: %s" % mission_file)
         #Clear existing mission from vehicle
         print(' Clear mission')
-        #cmds = self._vehicle.commands
         self._cmds.clear()
         #Add new mission to vehicle
         for command in missionlist:
+            command.seq=missionlist.index(command)+1
             self._cmds.add(command)
         print(' Upload mission')
-        #self._vehicle.commands.upload()
         self._cmds.upload()
 
 
@@ -480,33 +483,7 @@ def go_SAFTI(vehicle, va, safti_wp_n):
     bt.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
 
     return bt
-"""
-def at_wp(vehicle, va, wp_n):
-    at_wp = py_trees.composites.Sequence(name=("Is vehicle at\n waypoint %i ?" % wp_n),
-                                         children=[CheckCounter(vehicle, wp_n),
-                                                   py_trees.decorators.FailureIsRunning(py_trees.decorators.Inverter(LatSpeedUnder(vehicle,1.0))),
-                                                   CheckCounter(vehicle, wp_n),
-                                                   py_trees.decorators.FailureIsRunning(LatSpeedUnder(vehicle, 1)),
-                                                   CheckCounter(vehicle, wp_n),
-                                                   PlaySound(("Waypoint %i" % wp_n), va)])
-    at_wp.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
-    return at_wp
 
-def leg_handler(vehicle, va, wp_n, name, precond_next_wp=[py_trees.behaviours.Dummy(name="Precond Check")]):
-
-    precond_priority = py_trees.composites.Selector(name="WP {} Preconds".format(wp_n + 2))
-    for precond in precond_next_wp:
-        precond_priority.add_child(py_trees.decorators.Inverter(precond))
-
-    wait_then_set_ctr = py_trees.composites.Sequence(name="Wait then Set CTR to %i"  % (wp_n+2))
-    wait_then_set_ctr.add_children([py_trees.timers.Timer(), SetCounter(vehicle, (wp_n + 2))])
-    wait_then_set_ctr.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
-    precond_priority.add_child(wait_then_set_ctr)
-    bt = py_trees.composites.Sequence(name=("Leg Handler {}".format(int(((wp_n-1)/2)))),
-                                      children=[at_wp(vehicle, va, wp_n),
-                                      precond_priority])
-    return bt
-"""
 def precond_module(
         va,
         name="Precond Module",
@@ -514,13 +491,16 @@ def precond_module(
         mishap_voice="Precond Fail",
         fallback=py_trees.behaviours.Dummy(name="Fallback"),
         wait=False):
-    inverter_oneShot_fallback = py_trees.decorators.Inverter(py_trees.decorators.OneShot(fallback))
-    voice = py_trees.decorators.Inverter(PlaySound(mishap_voice, va))
+
+    sq = py_trees.composites.Sequence(children=[PlaySound(mishap_voice, va)])
     if wait==True:
-        timer=py_trees.decorators.Inverter(py_trees.timers.Timer())
-        bt = py_trees.composites.Selector(name=name,children=[safety_check, voice, timer, inverter_oneShot_fallback])
+        timer=py_trees.timers.Timer()
+        sq.add_children([timer, fallback])
+        bt = py_trees.composites.Selector(name=name,children=[safety_check, py_trees.decorators.Inverter(py_trees.decorators.OneShot(sq))])
+
     else:
-        bt = py_trees.composites.Selector(name=name,children=[safety_check, voice, inverter_oneShot_fallback])
+        sq.add_child(fallback)
+        bt = py_trees.composites.Selector(name=name,children=[safety_check, py_trees.decorators.Inverter(py_trees.decorators.OneShot(sq))])
         
     return bt
 
@@ -536,26 +516,10 @@ def safety_module(
     bt = py_trees.composites.Selector(name=name,children=[safety_check, oneShot_sq])
 
     return bt
-"""
-def wait_resolve_or_goSafti(vehicle, va, wp_n, safti_wp_n,
-                            cond, mishab_tts, recov_tts, 
-                            name="Stop Resolve or Go SAFTI"):
 
-    wait_at_wp = py_trees.decorators.SuccessIsRunning(SetCounter(vehicle, wp_n))
-    timeout_wait = py_trees.decorators.Timeout(wait_at_wp, duration=20)
-    selector = py_trees.composites.Selector(name="Fallback Priority")
-    selector.add_children([timeout_wait, go_SAFTI(vehicle, va, safti_wp_n)])
-
-    sq = py_trees.composites.Sequence(name=name)
-    sq.add_children([PlaySound(mishab_tts, va), selector])
-
-    sq.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
-
-    return sq
-"""
 def take_off(vehicle, va):
     
-    sq = py_trees.composites.Sequence(name="Is take-off complete?")
+    sq = py_trees.composites.Sequence(name="Is take-off\ncomplete?")
     finished_tko = py_trees.decorators.FailureIsRunning(CheckCounter(vehicle, 2))
     oneShot_playSound = py_trees.decorators.OneShot(PlaySound("Take-off completed", va))
     sq.add_children([CheckCounterLessThan(vehicle, 2), finished_tko, oneShot_playSound])
@@ -573,37 +537,12 @@ def landing(vehicle, va):
 
     sq.add_children([CheckLanding(vehicle), landed, oneShot_playSound])
 
-    lnd = py_trees.decorators.FailureIsRunning(sq, name="Is landing complete?")
+    lnd = py_trees.decorators.FailureIsRunning(sq, name="Is landing\ncomplete?")
 
     lnd.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
 
     return lnd
 
-"""
-def flight_manager(vehicle, va,
-        name="Flight Manager",
-        safety_modules=[py_trees.behaviours.Dummy(name="Safety Module 1"),  # dummy behaviours to enable dot rendering with py-trees-render
-                       py_trees.behaviours.Dummy(name="Safety Module 2")],
-        legs=[py_trees.behaviours.Dummy(name="Leg 1"),  # dummy behaviours to enable dot rendering with py-trees-render
-                   py_trees.behaviours.Dummy(name="Leg 2")]
-        ):
-    # Consruct Safety Branch
-    fm = py_trees.composites.Selector(name=name)
-    safety_parallel = py_trees.composites.Parallel(name="Safety Parallel")
-    # Add safety modules
-    for sm in safety_modules:
-        safety_parallel.add_child(sm)
-    
-    
-    invtr_plus_parallel = py_trees.decorators.Inverter(child=safety_parallel)
-
-    # Construct Waypoint Branch
-    wrap=[py_trees.decorators.OneShot(py_trees.decorators.FailureIsRunning(leg, name="F=R {}".format(legs.index(leg)+1)), name="OneShot {}".format(legs.index(leg)+1)) for leg in legs]
-    mission_handler = py_trees.composites.Parallel(name="Mission Handler", policy=py_trees.common.ParallelPolicy.SuccessOnSelected(children=[wrap[-1]]), children=wrap) 
-    fm.add_children([invtr_plus_parallel, mission_handler])
-    
-    return fm
-"""
 class FlightManager:
     def __init__(self, vehicle, va, wp_count, safety_modules):
         super(FlightManager, self).__init__()
@@ -649,12 +588,13 @@ class FlightManager:
         lh = py_trees.composites.Sequence(name=lh_name,
                                           children=[self.at_wp(wp_n),
                                           wrap])
+        #lh.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
         return lh
 
     def flight_manager_root(self):
         # Consruct Safety Branch
         fm = py_trees.composites.Selector(name="Flight Manager")
-        safety_parallel = py_trees.composites.Parallel(name="Safety Parallel")
+        safety_parallel = py_trees.composites.Parallel(name="Safety Monitor")
         # Add safety modules
         for sm in self._safety_modules:
             safety_parallel.add_child(sm)
@@ -666,11 +606,11 @@ class FlightManager:
         clearance = {3: 45, 5: 15, 7: 8, 9: 4}
 
         # Construct Waypoint Branch
-        wrap=[py_trees.decorators.OneShot(py_trees.decorators.FailureIsRunning(self.leg_handler(2,1)))]
+        wrap=[py_trees.decorators.OneShot(py_trees.decorators.FailureIsRunning(self.leg_handler(2,1), name="F=R"))]
         wp_n = 3
         while wp_n < self._wp_count:
             if wp_n == self._wp_count-2:
-                wrap.append(py_trees.decorators.OneShot(py_trees.decorators.FailureIsRunning(self.leg_handler(wp_n, 1))))
+                wrap.append(py_trees.decorators.OneShot(py_trees.decorators.FailureIsRunning(self.at_wp(wp_n), name="F=R")))
             else:
                 # Precond Construction
                 rtk_check = precond_module(self._va, name="RTK Check", safety_check=CheckGPS(self._vehicle, 5), mishap_voice="No RTK fix", fallback=go_SAFTI(self._vehicle, self._va, (self._wp_count-2)), wait=True)
@@ -678,7 +618,7 @@ class FlightManager:
                 rtk_check.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
                 clearance_check.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
                 # Mission leg construction
-                wrap.append(py_trees.decorators.OneShot(py_trees.decorators.FailureIsRunning(self.leg_handler(wp_n, 2, precond_next_wp=[rtk_check, clearance_check]))))
+                wrap.append(py_trees.decorators.OneShot(py_trees.decorators.FailureIsRunning(self.leg_handler(wp_n, 2, precond_next_wp=[rtk_check, clearance_check]), name="F=R")))
             wp_n+=2
 
         mission_handler = py_trees.composites.Parallel(name="Mission Handler", policy=py_trees.common.ParallelPolicy.SuccessOnSelected(children=[wrap[-1]]), children=wrap) 
