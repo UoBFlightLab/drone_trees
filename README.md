@@ -21,7 +21,7 @@ This has all been tested on Windows WSL, although the Python stuff should work j
 4. Alternatively, you can start your own ardupilot SITL with udp port of 14551 such as `sim_vehicle.py --map --console  -l 51.4545219,-2.6291727,584,270 --out 127.0.0.1:14550 --out 127.0.0.1:14551`.  Once the SITL is running `Arm` and take-off the drone in `Guided` mode then run `sim_demo.py`. Finally change mode to `Auto`.
 
 ## About the Example
-![Behaviour tree](https://raw.githubusercontent.com/hiradg/drone_trees/dev-che/example.png)
+![Behaviour tree](https://raw.githubusercontent.com/hiradg/drone_trees/master/example.png)
 Ogren's paper, referenced above, gives a really good introduction to how trees work, so I won't repeat that all here.  In summary:
 * the boxes are Sequences, that work through each child in turn until it returns "Success" before moving on to the next child.
 * the octagons are selectors, they try each child in order, if it returns "Failure" they move to the next child.
