@@ -25,6 +25,7 @@ def my_method(self, name, msg):
     global x
     x = msg
     print(x)
+
 """
 """
 class Bollocks(object):
@@ -50,68 +51,86 @@ print(Bollocks(1) - Bollocks(2))
 """     
 
 
-class CheckRC(py_trees.behaviour.Behaviour):
+class CheckRCLink(py_trees.behaviour.Behaviour):
 
     def __init__(self, vehicle):
-        super(CheckRC, self).__init__("RC1")
+        super(CheckRCLink, self).__init__("Check RC Link?")
         self._vehicle = vehicle
-        self._rc = None
+        self._text = None
+        self._failure = False
+        self._success = True
 
-    def mavlink_check(self):
-        @self._vehicle.on_message('RC_CHANNELS')
+    def checkMavlink(self):
+        @self._vehicle.on_message('STATUSTEXT')
         def listener(dkself, name, msg):
-            self._rc = msg.chan1_raw
+            self._text = msg.text
+    
+    def checkFailureCond(self):
+        if self._text == "Radio Failsafe - Continuing Auto Mode" or self._text == "PreArm: Radio failsafe on" or self._text == "Radio Failsafe" or self._text == "Radio Failsafe - Disarming":
+            self._failure=True
+            self._success=False
 
+    def checkSuccessCond(self):
+        if self._text == "Radio Failsafe Cleared":
+            self._failure=False
+            self._success=True
 
     def update(self):
-        while self._rc == None:
-            self.mavlink_check()
-
-        if self._rc > 100:
-            print(self._rc)
-            return py_trees.common.Status.SUCCESS
-        else:
+        self.checkMavlink()
+        self.checkFailureCond()
+        self.checkSuccessCond()
+        if self._failure:
             return py_trees.common.Status.FAILURE
+        elif self._success:
+            return py_trees.common.Status.SUCCESS
 
 
 class CheckGPSGlitch(py_trees.behaviour.Behaviour):
 
     def __init__(self, vehicle):
-        super(CheckGPSGlitch, self).__init__("Glitch")
+        super(CheckGPSGlitch, self).__init__("Check GPS Glitch?")
         self._vehicle = vehicle
-        self._severity = None
         self._text = None
+        self._failure = False
+        self._success = True
 
-    def mavlinkCheck(self):
+    def checkMavlink(self):
         @self._vehicle.on_message('STATUSTEXT')
         def listener(dkself, name, msg):
-            self._severity = msg.severity
             self._text = msg.text
 
+    def checkFailureCond(self):
+        if self._text == "GPS Glitch":
+            self._failure=True
+            self._success=False
+
+    def checkSuccessCond(self):
+        if self._text == "GPS Glitch cleared":
+            self._failure=False
+            self._success=True
 
     def update(self):
-        self.mavlinkCheck()
-        if self._severity == None:
-            return py_trees.common.Status.SUCCESS
-        elif self._severity < 3 and self._text == "GPS Glitch":
-            print(self._severity)
+        self.checkMavlink()
+        self.checkFailureCond()
+        self.checkSuccessCond()
+        if self._failure:
             return py_trees.common.Status.FAILURE
-        else:
+        elif self._success:
             return py_trees.common.Status.SUCCESS
 
 
 
 
 
-root=py_trees.composites.Sequence()
-root.add_children([py_trees.timers.Timer(duration=1), CheckGPSGlitch(vehicle)])
+root=py_trees.composites.Parallel()
+root.add_children([CheckRCLink(vehicle), CheckGPSGlitch(vehicle)])
 
 behaviour_tree = py_trees.trees.BehaviourTree(root)
 snapshot_visitor = py_trees.visitors.SnapshotVisitor()
 behaviour_tree.visitors.append(snapshot_visitor)
 
 
-for ii in range(50):
+for ii in range(1000):
     print("******* %i ********" % ii)
     print(vehicle.battery)
     print(vehicle.mode.name)
@@ -128,4 +147,5 @@ for ii in range(50):
     time.sleep(1)
 
 
-print(x)
+
+#print(x)
