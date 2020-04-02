@@ -3,7 +3,6 @@ terrain/**
 *.bin
 *.dot
 *.svg
-*.png
 *.pyc
 venv/*
 .vscode/settings.json

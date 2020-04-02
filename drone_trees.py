@@ -44,6 +44,7 @@ class MissionUtility:
         super(MissionUtility, self).__init__()
         self._vehicle = vehicle
         self._cmds = self._vehicle.commands
+        self._executable_mission_filename = os.path.join('mission', 'executable_mission.txt')
         
 
     def readmission(self, aFileName):
@@ -96,7 +97,7 @@ class MissionUtility:
             cmd.seq=missionlist.index(cmd)+1
             commandline="%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (cmd.seq,cmd.current,cmd.frame,cmd.command,cmd.param1,cmd.param2,cmd.param3,cmd.param4,cmd.x,cmd.y,cmd.z,cmd.autocontinue)
             output+=commandline
-        with open('output_mission.txt', 'w') as file_:
+        with open(self._executable_mission_filename, 'w') as file_:
             print(" Write mission to file")
             file_.write(output)
         
@@ -106,17 +107,13 @@ class MissionUtility:
         return wp_count
 
 
-    def upload_mission(self, mission_file):
+    def upload_mission(self):
         """
         Upload a mission from a file. 
         """
         #Read mission from file
-        missionlist = self.readmission(mission_file)
-        #missionlist_indexed=[]
-        #for cmd in missionlist:
-        #    cmd.seq=(missionlist.index(cmd)+1)
-        #    missionlist_indexed.append(cmd)
-        print("\nUpload mission from a file: %s" % mission_file)
+        missionlist = self.readmission(self._executable_mission_filename)
+        print("\nUpload mission from a file: %s" % self._executable_mission_filename)
         #Clear existing mission from vehicle
         print(' Clear mission')
         self._cmds.clear()
@@ -124,20 +121,19 @@ class MissionUtility:
         for command in missionlist:
             command.seq=missionlist.index(command)+1
             self._cmds.add(command)
-        print(' Upload mission')
+        print('Upload mission')
         self._cmds.upload()
 
 
 class MissionUpload(py_trees.behaviour.Behaviour):
 
-    def __init__(self, vehicle, mu, mission_file):
+    def __init__(self, vehicle, mu):
         super(MissionUpload, self).__init__('Mission Upload')
         self._vehicle = vehicle
-        self._mission_file = mission_file
         self._mu = mu
         
     def update(self):
-        self._mu.upload_mission(self._mission_file)
+        self._mu.upload_mission()
         return py_trees.common.Status.SUCCESS
 
 class log:
@@ -152,10 +148,11 @@ class log:
         self._f = open(self._filename, 'w')
         self._f.write('<html><head><title>Foo</title><body>')
 
-    def logging(self, iteration):
+    def logging(self, iteration, dot=False):
         self._f.write("<p>******************** %i ********************</p>" % iteration)
         self._f.write(py_trees.display.xhtml_tree(self._root, show_status=True))
-        py_trees.display.render_dot_tree(self._root, name='Sim_Demo_%i' % iteration, target_directory=self._bt_log_path)
+        if dot:
+            py_trees.display.render_dot_tree(self._root, name='tick_%i' % iteration, target_directory=self._bt_log_path)
 
     def terminate(self):
         self._f.write("</body></html>")
@@ -208,9 +205,17 @@ class CheckObstacle(py_trees.behaviour.Behaviour):
         super(CheckObstacle, self).__init__("Clearance > %i ?" % clearance)
         self._vehicle = vehicle
         self._clearance = clearance
+        self._distance = None
+
+    def checkMavlink(self):
+        @self._vehicle.on_message('DISTANCE_SENSOR')
+        def listener(dkself, name, msg):
+            self._distance = msg.current_distance
 
     def update(self):
-        if self._vehicle.distance_sensor.distance/100 > self._clearance:
+        while self._distance==None:
+            self.checkMavlink()
+        if self._distance/100 > self._clearance:
             return py_trees.common.Status.SUCCESS
         else:
             return py_trees.common.Status.FAILURE
@@ -270,17 +275,6 @@ class SetCounter(py_trees.behaviour.Behaviour):
 
     def __init__(self, vehicle, wpn):
         super(SetCounter, self).__init__("Set WP Counter to %i" % wpn)
-        self._vehicle = vehicle
-        self._wpn = wpn
-
-    def update(self):
-        self._vehicle.commands.next = self._wpn
-        return py_trees.common.Status.SUCCESS
-
-class GoSAFTI(py_trees.behaviour.Behaviour):
-
-    def __init__(self, vehicle, wpn):
-        super(GoSAFTI, self).__init__("Go SAFTI (WP %i)" % wpn)
         self._vehicle = vehicle
         self._wpn = wpn
 
@@ -429,7 +423,7 @@ def get_location_metres(original_location, dNorth, dEast):
     else:
         raise Exception("Invalid Location object passed")
 
-    return targetlocation;
+    return targetlocation
     
 class MoveDrone(py_trees.behaviour.Behaviour):
 
@@ -588,7 +582,7 @@ class FlightManager:
         lh = py_trees.composites.Sequence(name=lh_name,
                                           children=[self.at_wp(wp_n),
                                           wrap])
-        #lh.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
+
         return lh
 
     def flight_manager_root(self):
