@@ -1,0 +1,32 @@
+name: drone_trees
+channels:
+  - defaults
+dependencies:
+  - ca-certificates=2020.1.1=0
+  - certifi=2020.4.5.1=py37_0
+  - future=0.18.2=py37_0
+  - graphviz=2.38=hfd603c8_2
+  - libiconv=1.15=h1df5818_7
+  - libxml2=2.9.9=h464c3ec_0
+  - libxslt=1.1.33=h579f668_0
+  - lxml=4.5.0=py37h1350720_0
+  - monotonic=1.5=py_0
+  - openssl=1.1.1f=he774522_0
+  - pip=20.0.2=py37_1
+  - psutil=5.7.0=py37he774522_0
+  - python=3.7.7=h60c2a47_0_cpython
+  - setuptools=46.1.3=py37_0
+  - six=1.14.0=py37_0
+  - sqlite=3.31.1=he774522_0
+  - vc=14.1=h0510ff6_4
+  - vs2015_runtime=14.16.27012=hf0eaf9b_1
+  - wheel=0.34.2=py37_0
+  - wincertstore=0.2=py37_0
+  - zlib=1.2.11=h62dcd97_3
+  - pip:
+    - dronekit==2.9.2
+    - dronekit-sitl==3.3.0
+    - py-trees==2.0.13
+    - pydot==1.4.1
+    - pymavlink==2.4.7
+    - pyparsing==2.4.7

@@ -3,40 +3,7 @@
 import py_trees
 import math
 import os
-from dronekit import connect, VehicleMode, LocationGlobal, LocationGlobalRelative, Command
-from pymavlink import mavutil
-import pyttsx3
-import queue
-from queue import Queue
-import threading
-import time
-
-class VoiceAssistant(threading.Thread):
-    def __init__(self):
-        super(VoiceAssistant, self).__init__(daemon=True)
-        self._engine = pyttsx3.init()
-        self._q = Queue()
-        self._loop_should_exit = False
-    
-    def kill(self):
-        self._loop_should_exit = True
-        print('----------Kill-----------')
-
-    def add_say(self, msg):
-        self._q.put(msg)
-        print("[add_say] Adding: \"" + msg + "\"")
-
-    def run(self):
-        while not self._loop_should_exit:
-            try:
-                self._engine.say(self._q.get(False))
-                self._engine.startLoop(False)
-                self._engine.iterate()
-                time.sleep(1)
-                self._engine.endLoop()
-                self._q.task_done()
-            except queue.Empty as e:
-                pass
+from dronekit import VehicleMode, LocationGlobal, LocationGlobalRelative, Command
 
 class MissionUtility:
     
@@ -213,12 +180,15 @@ class CheckObstacle(py_trees.behaviour.Behaviour):
             self._distance = msg.current_distance
 
     def update(self):
+        print('Checking range')
         while self._distance==None:
             self.checkMavlink()
+        print('Range is {}'.format(self._distance))
         if self._distance/100 > self._clearance:
             return py_trees.common.Status.SUCCESS
         else:
             return py_trees.common.Status.FAILURE
+        
 class CheckEKF(py_trees.behaviour.Behaviour):
 
     def __init__(self, vehicle):
@@ -279,6 +249,7 @@ class SetCounter(py_trees.behaviour.Behaviour):
         self._wpn = wpn
 
     def update(self):
+        print('Setting WP counter to {}'.format(self._wpn))
         self._vehicle.commands.next = self._wpn
         return py_trees.common.Status.SUCCESS
 
@@ -347,8 +318,10 @@ class PlaySound(py_trees.behaviour.Behaviour):
     def update(self):
         print("[WarningSound::update] Adding: \"" + self._msg + "\"")
         # Adding message to the Voice Assistant queue
-        self._voiceAst.add_say(self._msg)
-
+        if self._voiceAst:
+            self._voiceAst.add_say(self._msg)
+        else:
+            print("Muted")
         if self._returnFailure:
             return py_trees.common.Status.FAILURE
         else:
