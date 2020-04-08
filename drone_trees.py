@@ -180,10 +180,8 @@ class CheckObstacle(py_trees.behaviour.Behaviour):
             self._distance = msg.current_distance
 
     def update(self):
-        print('Checking range')
         while self._distance==None:
             self.checkMavlink()
-        print('Range is {}'.format(self._distance))
         if self._distance/100 > self._clearance:
             return py_trees.common.Status.SUCCESS
         else:
