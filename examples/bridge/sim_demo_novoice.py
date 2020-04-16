@@ -1,24 +1,16 @@
 import py_trees
 import time
 import socket
-#import sys
-import os
 import drone_trees as dt
 from dronekit import connect
 from distance_sensor_vehicle import DistanceSensorVehicle
 import dronekit_sitl
+import sys
 #from voice_assistant import VoiceAssistant
-#import signal
 
 connection_string = 'tcp:127.0.0.1:14550'
 
 input_mission_filename = 'input_mission.txt'
-        
-sitl = None
-use_own_sitl = True
-if use_own_sitl:
-    sitl = dronekit_sitl.start_default()
-    connection_string = sitl.connection_string()
 
 class GroundControlAutomation:
     def __init__(self, vehicle, voice_asst = None):
@@ -126,19 +118,17 @@ class GroundControlAutomation:
         
         self.cleanup()
 
-# def cleanup():
-#     sys.exit()
-
-# def handler(signum, frame):
-#     print('Signal handler called with signal', signum)
-#     cleanup()
-
-# # Register signal handler
-# signal.signal(signal.SIGINT, handler)
-
 def main():
-    # Connect to the Vehicle.
-    print("Connecting to vehicle on: %s" % (connection_string,))
+    
+    if len(sys.argv)>1:
+        sitl = None
+        connection_string = sys.argv[1]
+        print("Attempting to connect via {}".format(connection_string))
+    else:
+        sitl = dronekit_sitl.start_default()
+        connection_string = sitl.connection_string()
+        print("Using SITL via {}".format(connection_string))
+
     try:
         vehicle = connect(connection_string, wait_ready=True, vehicle_class=DistanceSensorVehicle)
     except socket.error as e:
@@ -159,5 +149,5 @@ def main():
     if sitl:
         sitl.stop()
 
-
-main()
+if __name__ == "__main__":
+    main()
