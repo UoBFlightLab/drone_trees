@@ -41,7 +41,7 @@ class DistanceSensor(object):
                                                                                    self.id)
 
    
-class CascadeVehicle(Vehicle):
+class DistanceSensorVehicle(Vehicle):
     """
     Custom vehicle subclass created for the CASCADE project
     
@@ -49,7 +49,7 @@ class CascadeVehicle(Vehicle):
         - includes distance sensor attributes
     """
     def __init__(self, *args):
-        super(CascadeVehicle, self).__init__(*args)
+        super(DistanceSensorVehicle, self).__init__(*args)
 
         # Create an array of distance sensors
         max_distance_sensors = 8

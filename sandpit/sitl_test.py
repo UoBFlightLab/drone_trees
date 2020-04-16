@@ -5,7 +5,7 @@ from cascade_vehicle import CascadeVehicle
 
 connection_string = 'tcp:127.0.0.1:14550'
 
-use_own_sitl = False
+use_own_sitl = True
 if use_own_sitl:
     sitl = dronekit_sitl.start_default()
     connection_string = sitl.connection_string()

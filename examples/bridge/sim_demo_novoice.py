@@ -1,16 +1,24 @@
 import py_trees
 import time
 import socket
-import sys
+#import sys
 import os
 import drone_trees as dt
 from dronekit import connect
+from distance_sensor_vehicle import DistanceSensorVehicle
+import dronekit_sitl
 #from voice_assistant import VoiceAssistant
-import signal
+#import signal
 
-#connection_string = 'tcp:127.0.0.1:5763' # SITL back door
-connection_string = 'tcp:127.0.0.1:14550' # Mission Planner back door
-#connection_string = 'up:127.0.0.1:14551'
+connection_string = 'tcp:127.0.0.1:14550'
+
+input_mission_filename = 'input_mission.txt'
+        
+sitl = None
+use_own_sitl = True
+if use_own_sitl:
+    sitl = dronekit_sitl.start_default()
+    connection_string = sitl.connection_string()
 
 class GroundControlAutomation:
     def __init__(self, vehicle, voice_asst = None):
@@ -24,7 +32,6 @@ class GroundControlAutomation:
             self.va.start()
         # Generate executable mission file
         self.missionUtility = dt.MissionUtility(self.vehicle)
-        input_mission_filename = os.path.join('mission', 'input_mission.txt')
         self.wp_count = self.missionUtility.gen_exe_mission(input_mission_filename, 7, 10)
         self.SAFTI = self.wp_count-2 # SAFTI waypoint number
 
@@ -40,7 +47,6 @@ class GroundControlAutomation:
 
     def behaviourTree(self):
         
-        input_mission_filename = os.path.join('mission', 'executable_mission.txt')
         # pre-flight
 
         preflight_GPS_Check = dt.preflight_Module(self.vehicle, self.va, 
@@ -134,7 +140,7 @@ def main():
     # Connect to the Vehicle.
     print("Connecting to vehicle on: %s" % (connection_string,))
     try:
-        vehicle = connect(connection_string, wait_ready=True)
+        vehicle = connect(connection_string, wait_ready=True, vehicle_class=DistanceSensorVehicle)
     except socket.error as e:
         print(e)
         # proceed just with a blank object so I can render the tree
@@ -150,7 +156,8 @@ def main():
     gca.run(root)
 
     vehicle.close()
-    #cleanup()
+    if sitl:
+        sitl.stop()
 
 
 main()
