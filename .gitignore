@@ -11,3 +11,4 @@ seg2.txt
 test.py
 TestSuite/Test_Results/
 sandpit/.pylint.d
+.pylint.d
