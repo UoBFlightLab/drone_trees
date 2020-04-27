@@ -6,9 +6,9 @@ Created on Fri Apr 24 11:52:28 2020
 """
 
 from drone_trees import leaf_nodes as lf
+from drone_trees.control_automaton import ControlAutomaton
 from py_trees.composites import Sequence
 from py_trees.decorators import FailureIsRunning, Inverter, OneShot
-from drone_trees.ground_ctrl_auto import GroundControlAutomaton
 
 # utility function for behaviour to move by offset and wait until almost stationary
 def move_behaviour(vehicle, dNorth, dEast, dDown):    
@@ -18,19 +18,27 @@ def move_behaviour(vehicle, dNorth, dEast, dDown):
                        FailureIsRunning(lf.LatSpeedUnder(vehicle,0.1))])
     return(bt_move)
 
+def pre_flight(vehicle):
+    bt_pf = FailureIsRunning(Sequence(name="Pre-flight",
+                                      children=[lf.CheckMode(vehicle, "GUIDED"),
+                                                lf.IsArmed(vehicle)]))
+    return(bt_pf)
+
 def behaviour_tree(vehicle):
     bt = OneShot(Sequence(name="Flight",
-                  children=[FailureIsRunning(lf.CheckMode(vehicle, "GUIDED")),
-                            FailureIsRunning(lf.IsArmed(vehicle)),
+                  children=[pre_flight(vehicle),
                             lf.SimpleTakeoff(vehicle, 20),
                             FailureIsRunning(lf.AltLocalAbove(vehicle, 18)),
-                            move_behaviour(vehicle, 10, 0, 0),
-                            move_behaviour(vehicle, 0, 10, 0),
-                            move_behaviour(vehicle, -10, 0, 0),
-                            move_behaviour(vehicle, 0, -10, 0)]))
+                            move_behaviour(vehicle, 50, 0, 0),
+                            move_behaviour(vehicle, 0, 50, 0),
+                            move_behaviour(vehicle, -50, 0, 0),
+                            move_behaviour(vehicle, 0, -50, 0),
+                            lf.Land(vehicle),
+                            FailureIsRunning(Inverter(lf.AltLocalAbove(vehicle, 1.0)))
+                            ]))
     return(bt)
 
-app = GroundControlAutomaton(behaviour_tree)
+app = ControlAutomaton(behaviour_tree)
     
 if __name__ == "__main__":
     app.main()

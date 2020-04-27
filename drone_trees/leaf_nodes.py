@@ -50,15 +50,26 @@ class SetParam(py_trees.behaviour.Behaviour):
         return py_trees.common.Status.SUCCESS
 
 
-class ChangeMode(py_trees.behaviour.Behaviour):
+# class ChangeMode(py_trees.behaviour.Behaviour):
 
-    def __init__(self, vehicle, mode_name):
-        # use name of mode as label for behaviour
-        super(ChangeMode, self).__init__(mode_name)
-        # in time may want to delay connection
-        # and use setup method instead
+#     def __init__(self, vehicle, mode_name):
+#         # use name of mode as label for behaviour
+#         super(ChangeMode, self).__init__(mode_name)
+#         # in time may want to delay connection
+#         # and use setup method instead
+#         self._vehicle = vehicle
+#         self._mode = VehicleMode(mode_name)
+
+#     def update(self):
+#         self._vehicle.mode = self._mode
+#         return py_trees.common.Status.SUCCESS
+
+class Land(py_trees.behaviour.Behaviour):
+
+    def __init__(self, vehicle):
+        super(Land, self).__init__()
         self._vehicle = vehicle
-        self._mode = VehicleMode(mode_name)
+        self._mode = VehicleMode('RTL')
 
     def update(self):
         self._vehicle.mode = self._mode
@@ -205,15 +216,15 @@ class IsArmed(py_trees.behaviour.Behaviour):
             return py_trees.common.Status.FAILURE
         
         
-class ArmDrone(py_trees.behaviour.Behaviour):
+# class ArmDrone(py_trees.behaviour.Behaviour):
 
-    def __init__(self, vehicle):
-        super(ArmDrone, self).__init__('Arm')
-        self._vehicle = vehicle
+#     def __init__(self, vehicle):
+#         super(ArmDrone, self).__init__('Arm')
+#         self._vehicle = vehicle
         
-    def update(self):
-        self._vehicle.armed=True
-        return py_trees.common.Status.SUCCESS
+#     def update(self):
+#         self._vehicle.armed=True
+#         return py_trees.common.Status.SUCCESS
     
 
 class SimpleTakeoff(py_trees.behaviour.Behaviour):
