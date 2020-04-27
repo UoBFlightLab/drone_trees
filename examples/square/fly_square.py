@@ -34,7 +34,7 @@ def behaviour_tree(vehicle):
                             move_behaviour(vehicle, -50, 0, 0),
                             move_behaviour(vehicle, 0, -50, 0),
                             lf.Land(vehicle),
-                            FailureIsRunning(Inverter(lf.AltLocalAbove(vehicle, 1.0)))
+                            FailureIsRunning(Inverter(lf.AltLocalAbove(vehicle, 0.3)))
                             ]))
     return(bt)
 

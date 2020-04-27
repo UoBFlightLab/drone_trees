@@ -75,20 +75,26 @@ class ControlAutomaton:
         self._bt.visitors.append(self._snapshot_visitor)
         self._bt.visitors.append(DebugVisitor())
         
+    def finished(self):
+        if self._bt.root.status==Status.SUCCESS:
+            return True
+        else:
+            return False
+        
     def tick(self):
         print("******** {} *********".format(self._bt.count))
-        print(self.vehicle.battery)
-        print(self.vehicle.mode.name)
-        print(self.vehicle.location.global_frame.alt)
-        print("+++++++++++++++++++++")
         self._bt.tick()
         # print BT
         if self._snapshot_visitor:
             print(unicode_tree(self._bt.root,
                                visited=self._snapshot_visitor.visited,
                                previously_visited=self._snapshot_visitor.visited))
-        # exit after 1000 seconds
-        if self._bt.root.status==Status.SUCCESS:
+            print("+++++++++++++++++++++")
+        print(self.vehicle.battery)
+        print('Mode: {}'.format(self.vehicle.mode.name))
+        print('Altitude: {}'.format(self.vehicle.location.global_relative_frame.alt))
+        # exit after timeout or completion
+        if self.finished():
             print("**** Flight completed in {} steps".format(self._bt.count))
             self._loop_should_exit = True
         if self._bt.count>self._max_ticks:
