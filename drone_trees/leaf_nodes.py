@@ -5,15 +5,43 @@ from dronekit import VehicleMode, LocationGlobal, LocationGlobalRelative
 
 class MissionUpload(py_trees.behaviour.Behaviour):
 
-    def __init__(self, vehicle, mu):
+    def __init__(self, vehicle, wplist):
         super(MissionUpload, self).__init__('Mission Upload')
         self._vehicle = vehicle
-        self._mu = mu
+        self._wplist = wplist
         
     def update(self):
-        self._mu.upload_mission()
-        return py_trees.common.Status.SUCCESS
+        # only permitted to upload if unarmed
+        if self._vehicle.is_armed:
+            return py_trees.common.Status.FAILURE
+        else:
+            self._vehicle.commands.clear()
+            for wp in self._wplist:
+                self._vehicle.commands.add(wp)
+            self._vehicle.commands.upload()
+            return py_trees.common.Status.SUCCESS
 
+class MissionVerify(py_trees.behaviour.Behaviour):
+
+    def __init__(self, vehicle, wplist):
+        super(MissionVerify, self).__init__('Mission Verify')
+        self._vehicle = vehicle
+        self._wplist = wplist[:]
+
+    def initialise(self):
+        self._vehicle.commands.clear()
+        self._vehicle.commands.download()
+        
+    def update(self):
+        if self._vehicle.commands.count < len(self._wplist):
+            return py_trees.common.Status.RUNNING
+        else:
+            cmd_list = [cmd for cmd in self._vehicle.commands]
+            if cmd_list[:]==self._wplist[:]:
+                return py_trees.common.Status.SUCCESS
+            else:
+                return py_trees.common.Status.FAILURE
+                
 class log:
     def __init__(self, root, path):
         super(log, self).__init__()
@@ -36,6 +64,7 @@ class log:
         self._f.write("</body></html>")
         self._f.close()
 
+
 class SetParam(py_trees.behaviour.Behaviour):
 
     def __init__(self, vehicle, param_name, new_value):
@@ -50,20 +79,6 @@ class SetParam(py_trees.behaviour.Behaviour):
         return py_trees.common.Status.SUCCESS
 
 
-# class ChangeMode(py_trees.behaviour.Behaviour):
-
-#     def __init__(self, vehicle, mode_name):
-#         # use name of mode as label for behaviour
-#         super(ChangeMode, self).__init__(mode_name)
-#         # in time may want to delay connection
-#         # and use setup method instead
-#         self._vehicle = vehicle
-#         self._mode = VehicleMode(mode_name)
-
-#     def update(self):
-#         self._vehicle.mode = self._mode
-#         return py_trees.common.Status.SUCCESS
-
 class Land(py_trees.behaviour.Behaviour):
 
     def __init__(self, vehicle):
@@ -74,6 +89,7 @@ class Land(py_trees.behaviour.Behaviour):
     def update(self):
         self._vehicle.mode = self._mode
         return py_trees.common.Status.SUCCESS
+
 
 class CheckGPS(py_trees.behaviour.Behaviour):
 
@@ -87,6 +103,7 @@ class CheckGPS(py_trees.behaviour.Behaviour):
             return py_trees.common.Status.SUCCESS
         else:
             return py_trees.common.Status.FAILURE
+
 
 class CheckObstacle(py_trees.behaviour.Behaviour):
 
@@ -147,6 +164,7 @@ class CheckCounterLessThan(py_trees.behaviour.Behaviour):
         else:
             return py_trees.common.Status.FAILURE
 
+
 class CheckLanding(py_trees.behaviour.Behaviour):
 
     def __init__(self, vehicle):
@@ -161,6 +179,7 @@ class CheckLanding(py_trees.behaviour.Behaviour):
         else:
             return py_trees.common.Status.FAILURE
 
+
 class SetCounter(py_trees.behaviour.Behaviour):
 
     def __init__(self, vehicle, wpn):
@@ -169,9 +188,15 @@ class SetCounter(py_trees.behaviour.Behaviour):
         self._wpn = wpn
 
     def update(self):
-        print('Setting WP counter to {}'.format(self._wpn))
-        self._vehicle.commands.next = self._wpn
-        return py_trees.common.Status.SUCCESS
+        cur_wpn = self._vehicle.commands.next 
+        if cur_wpn <= self._wpn:
+            print('Advancing WP counter from {} to {}'.format((cur_wpn,self._wpn)))
+            self._vehicle.commands.next = self._wpn
+            return py_trees.common.Status.SUCCESS
+        else:
+            print('Cannot move WP counter backwards from {} to {}'.format((cur_wpn,self._wpn)))
+            return py_trees.common.Status.FAILURE
+            
 
 class CheckMode(py_trees.behaviour.Behaviour):
 
@@ -260,6 +285,7 @@ class PlaySound(py_trees.behaviour.Behaviour):
         else:
             return py_trees.common.Status.SUCCESS
 
+
 class AltGlobalAbove(py_trees.behaviour.Behaviour):
 
     def __init__(self, vehicle, altitude):
@@ -287,6 +313,7 @@ class AltLocalAbove(py_trees.behaviour.Behaviour):
         else:
             return py_trees.common.Status.FAILURE
 
+
 class BatteryLevelAbove(py_trees.behaviour.Behaviour):
 
     def __init__(self, vehicle, level):
@@ -299,6 +326,7 @@ class BatteryLevelAbove(py_trees.behaviour.Behaviour):
             return py_trees.common.Status.SUCCESS
         else:
             return py_trees.common.Status.FAILURE
+
 
 def get_location_metres(original_location, dNorth, dEast):
     """
@@ -317,20 +345,19 @@ def get_location_metres(original_location, dNorth, dEast):
     earth_radius=6378137.0 #Radius of "spherical" earth
     #Coordinate offsets in radians
     dLat = dNorth/earth_radius
-    dLon = dEast/(earth_radius*math.cos(math.pi*original_location.lat/180))
-
+    dLon = dEast/(earth_radius*math.cos(math.pi*original_location.lat/180.))
     #New position in decimal degrees
-    newlat = original_location.lat + (dLat * 180/math.pi)
-    newlon = original_location.lon + (dLon * 180/math.pi)
+    newlat = original_location.lat + (dLat * 180./math.pi)
+    newlon = original_location.lon + (dLon * 180./math.pi)
     if type(original_location) is LocationGlobal:
         targetlocation=LocationGlobal(newlat, newlon,original_location.alt)
     elif type(original_location) is LocationGlobalRelative:
         targetlocation=LocationGlobalRelative(newlat, newlon,original_location.alt)
     else:
         raise Exception("Invalid Location object passed")
-
     return targetlocation
     
+
 class MoveDrone(py_trees.behaviour.Behaviour):
 
     def __init__(self, vehicle, dNorth, dEast, dDown):
@@ -348,7 +375,6 @@ class MoveDrone(py_trees.behaviour.Behaviour):
         return py_trees.common.Status.SUCCESS
 
 
-
 class LatSpeedUnder(py_trees.behaviour.Behaviour):
 
     def __init__(self, vehicle, max_speed):
@@ -363,5 +389,4 @@ class LatSpeedUnder(py_trees.behaviour.Behaviour):
             return py_trees.common.Status.SUCCESS
         else:
             return py_trees.common.Status.FAILURE
-
-    
+        

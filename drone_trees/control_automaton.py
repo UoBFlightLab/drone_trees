@@ -14,6 +14,7 @@ from py_trees.visitors import DebugVisitor,SnapshotVisitor
 from py_trees.display import render_dot_tree, unicode_tree
 from py_trees.common import Status
 import time
+from drone_trees.drone_tree_vehicle import DroneTreeVehicle
 
 class ControlAutomaton:
     
@@ -28,14 +29,14 @@ class ControlAutomaton:
         self._loop_should_exit = False
         self._max_ticks = 1000
     
-    def startup(self,force_sitl=False):
+    def startup(self,force_sitl=False, sitl_lat=51.454531, sitl_lon=-2.629158):
         """
         Interpret command line arguments and connect to the vehicle 
         if necessary (i.e. not in render mode)
         """
         self._app_name = sys.argv[0]
         if force_sitl:
-            self._sitl = dronekit_sitl.start_default()
+            self._sitl = dronekit_sitl.start_default(sitl_lat,sitl_lon)
             self._connection_string = self._sitl.connection_string()
             print("Using SITL via {}".format(self._connection_string))
             self.connect()
@@ -66,7 +67,8 @@ class ControlAutomaton:
                     
     def connect(self):
         try:
-            self.vehicle = connect(self._connection_string, wait_ready=True)
+            self.vehicle = connect(self._connection_string, wait_ready=True, \
+                                   vehicle_class=DroneTreeVehicle)
         except socket.error as e:
             print(e)
             return
