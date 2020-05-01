@@ -28,6 +28,9 @@ class ControlAutomaton:
         self.vehicle = None
         self._loop_should_exit = False
         self._max_ticks = 1000
+        
+    def __del__(self):
+        self.cleanup()
     
     def startup(self,force_sitl=False, sitl_lat=51.454531, sitl_lon=-2.629158):
         """
@@ -116,10 +119,7 @@ class ControlAutomaton:
     def main(self):
         self.startup()
         if self.vehicle:
-            try:
-                while not self._loop_should_exit:
-                    self.tick()
-                    time.sleep(1)
-            except:
-                print(sys.exc_info()[0])
+            while not self._loop_should_exit:
+                self.tick()
+                time.sleep(1)
             self.cleanup()

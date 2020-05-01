@@ -12,11 +12,12 @@ class MissionUpload(py_trees.behaviour.Behaviour):
         
     def update(self):
         # only permitted to upload if unarmed
-        if self._vehicle.is_armed:
+        if self._vehicle.armed:
             return py_trees.common.Status.FAILURE
         else:
             self._vehicle.commands.clear()
             for wp in self._wplist:
+                wp.seq = self._wplist.index(wp)+1
                 self._vehicle.commands.add(wp)
             self._vehicle.commands.upload()
             return py_trees.common.Status.SUCCESS
@@ -34,10 +35,12 @@ class MissionVerify(py_trees.behaviour.Behaviour):
         
     def update(self):
         if self._vehicle.commands.count < len(self._wplist):
+            self.feedback_message = 'Got {} of {} WPs'.format(self._vehicle.commands.count,
+                                                             len(self._wplist))
             return py_trees.common.Status.RUNNING
         else:
             cmd_list = [cmd for cmd in self._vehicle.commands]
-            if cmd_list[:]==self._wplist[:]:
+            if cmd_list[1:]==self._wplist[:]:
                 return py_trees.common.Status.SUCCESS
             else:
                 return py_trees.common.Status.FAILURE
