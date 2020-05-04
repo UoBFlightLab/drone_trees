@@ -18,12 +18,14 @@ from drone_trees.drone_tree_vehicle import DroneTreeVehicle
 
 class ControlAutomaton:
     
-    def __init__(self, bt_func):
+    def __init__(self, bt_func, sitl_lat=51.454531, sitl_lon=-2.629158):
         super(ControlAutomaton, self).__init__()
         self._bt_func = bt_func
         self._bt = None
         self._app_name = "App name"
         self._sitl = None
+        self._sitl_lat = sitl_lat
+        self._sitl_lon = sitl_lon
         self._connection_string = None
         self.vehicle = None
         self._loop_should_exit = False
@@ -32,18 +34,18 @@ class ControlAutomaton:
     def __del__(self):
         self.cleanup()
     
-    def startup(self,force_sitl=False, sitl_lat=51.454531, sitl_lon=-2.629158):
+    def startup(self,force_sitl=False):
         """
         Interpret command line arguments and connect to the vehicle 
         if necessary (i.e. not in render mode)
         """
         self._app_name = sys.argv[0]
         if force_sitl:
-            self._sitl = dronekit_sitl.start_default(sitl_lat,sitl_lon)
+            self._sitl = dronekit_sitl.start_default(self._sitl_lat,self._sitl_lon)
             self._connection_string = self._sitl.connection_string()
             print("Using SITL via {}".format(self._connection_string))
             self.connect()
-        if len(sys.argv)!=2:
+        elif len(sys.argv)!=2:
             print("""Usage:
                   
   {0} sitl
@@ -98,6 +100,7 @@ class ControlAutomaton:
         print(self.vehicle.battery)
         print('Mode: {}'.format(self.vehicle.mode.name))
         print('Altitude: {}'.format(self.vehicle.location.global_relative_frame.alt))
+        print('Connected to {}'.format(self._connection_string))
         # exit after timeout or completion
         if self.finished():
             print("**** Flight completed in {} steps".format(self._bt.count))
