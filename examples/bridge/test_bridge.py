@@ -13,7 +13,7 @@ from time import sleep
 def test_nominal():
     ca = ControlAutomaton(behaviour_tree)
     ca.startup(force_sitl=True)
-    for ii in range(5):
+    for ii in range(10):
         ca.tick()
         sleep(1)
     # should still be on the ground
@@ -24,6 +24,7 @@ def test_nominal():
         sleep(1)
     # should be on the ground
     assert ca.vehicle.location.global_relative_frame.alt < 0.2
+    # switch to auto and lift the throttle to trigger auto takeoff
     ca.vehicle.mode = VehicleMode('AUTO')
     ca.vehicle.channels.overrides['3']=1700
     for ii in range(200):

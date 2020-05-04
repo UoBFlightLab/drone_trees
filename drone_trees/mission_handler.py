@@ -6,7 +6,7 @@ Created on Fri Apr 24 09:45:52 2020
 """
 
 from pymavlink.mavwp import MAVWPLoader
-from drone_trees.leaf_nodes import SetCounter, MissionUpload, MissionVerify
+from drone_trees.leaf_nodes import SetCounter, MissionUpload #, MissionVerify
 
 class MissionHandler:
     
@@ -41,8 +41,7 @@ class MissionHandler:
     def go_safti(self,vehicle):
         if self._safti_num is None:
             self.get_safti()
-        else:
-            return(SetCounter(vehicle, self._safti_num))
+        return(SetCounter(vehicle, self._safti_num))
     
     def upload_mission(self,vehicle):
         return(MissionUpload(vehicle,self._wp.wpoints[:]))    

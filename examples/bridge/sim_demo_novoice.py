@@ -41,7 +41,7 @@ class GroundControlAutomation:
         self.vehicle.close()
 
     def behaviourTree(self):
-        
+
         # pre-flight
 
         preflight_GPS_Check = im.preflight_Module(self.vehicle, self.va, 
