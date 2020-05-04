@@ -15,11 +15,16 @@ class MissionUpload(py_trees.behaviour.Behaviour):
         if self._vehicle.armed:
             return py_trees.common.Status.FAILURE
         else:
-            self._vehicle.commands.clear()
+            cmds = self._vehicle.commands
+            cmds.clear()
+            # add a dummy command on the front
+            # just the first WP used as a placeholder
+            # upload seems to skip the first WP
+            cmds.add(self._wplist[0])
             for wp in self._wplist:
-                wp.seq = self._wplist.index(wp)+1
-                self._vehicle.commands.add(wp)
-            self._vehicle.commands.upload()
+                cmds.add(wp)
+            cmds.upload()
+            self.feedback_message = 'Uploaded {} WPs'.format(cmds.count)
             return py_trees.common.Status.SUCCESS
 
 class MissionVerify(py_trees.behaviour.Behaviour):
@@ -212,9 +217,12 @@ class CheckMode(py_trees.behaviour.Behaviour):
         self._mode_name = mode_name
 
     def update(self):
-        if self._vehicle.mode.name == self._mode_name:
+        current_mode = self._vehicle.mode.name
+        if current_mode == self._mode_name:
+            self.feedback_message = 'Yes'
             return py_trees.common.Status.SUCCESS
         else:
+            self.feedback_message = 'No, it''s {}'.format(current_mode)
             return py_trees.common.Status.FAILURE
 
 

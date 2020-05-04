@@ -21,8 +21,7 @@ def behaviour_tree(vehicle):
     mh = MissionHandler('executable_mission.txt')
     
     bt_mission = Sequence(name="Mission TX", 
-                          children=[FailureIsRunning(lf.CheckMode(vehicle, 'GUIDED')),
-                                    mh.upload_mission(vehicle),
+                          children=[mh.upload_mission(vehicle),
                                     #mh.verify_mission(vehicle),
                                     ])
     
