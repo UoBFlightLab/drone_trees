@@ -50,28 +50,6 @@ class MissionUpload(py_trees.behaviour.Behaviour):
 #             else:
 #                 return py_trees.common.Status.FAILURE
                 
-class log:
-    def __init__(self, root, path):
-        super(log, self).__init__()
-        self._root = root
-        self._path = path
-        
-        # Make HTML file for the html log
-        self._bt_log_path = os.path.join(self._path, 'BT')
-        self._filename = os.path.join(self._bt_log_path, 'bt_log.html')
-        self._f = open(self._filename, 'w')
-        self._f.write('<html><head><title>Foo</title><body>')
-
-    def logging(self, iteration, dot=False):
-        self._f.write("<p>******************** %i ********************</p>" % iteration)
-        self._f.write(py_trees.display.xhtml_tree(self._root, show_status=True))
-        if dot:
-            py_trees.display.render_dot_tree(self._root, name='tick_%i' % iteration, target_directory=self._bt_log_path)
-
-    def terminate(self):
-        self._f.write("</body></html>")
-        self._f.close()
-
 
 class SetParam(py_trees.behaviour.Behaviour):
 
@@ -259,6 +237,26 @@ class CheckMode(py_trees.behaviour.Behaviour):
             return py_trees.common.Status.FAILURE
 
 
+class CheckModeNot(py_trees.behaviour.Behaviour):
+
+    def __init__(self, vehicle, mode_name):
+        # use name of mode as label for behaviour
+        super(CheckModeNot, self).__init__("Is mode NOT %s ?" % mode_name)
+        # in time may want to delay connection
+        # and use setup method instead
+        self._vehicle = vehicle
+        self._mode_name = mode_name
+
+    def update(self):
+        current_mode = self._vehicle.mode.name
+        if current_mode == self._mode_name:
+            self.feedback_message = 'Fail: mode is {}'.format(current_mode)
+            return py_trees.common.Status.FAILURE
+        else:
+            self.feedback_message = 'OK, it''s {}'.format(current_mode)
+            return py_trees.common.Status.SUCCESS
+        
+
 class IsArmable(py_trees.behaviour.Behaviour):
 
     def __init__(self, vehicle):
@@ -440,3 +438,26 @@ class LatSpeedUnder(py_trees.behaviour.Behaviour):
             self.feedback_message = 'No, speed is {}'.format(current_speed)
             return py_trees.common.Status.FAILURE
         
+        
+class log:
+    def __init__(self, root, path):
+        super(log, self).__init__()
+        self._root = root
+        self._path = path
+        
+        # Make HTML file for the html log
+        self._bt_log_path = os.path.join(self._path, 'BT')
+        self._filename = os.path.join(self._bt_log_path, 'bt_log.html')
+        self._f = open(self._filename, 'w')
+        self._f.write('<html><head><title>Foo</title><body>')
+
+    def logging(self, iteration, dot=False):
+        self._f.write("<p>******************** %i ********************</p>" % iteration)
+        self._f.write(py_trees.display.xhtml_tree(self._root, show_status=True))
+        if dot:
+            py_trees.display.render_dot_tree(self._root, name='tick_%i' % iteration, target_directory=self._bt_log_path)
+
+    def terminate(self):
+        self._f.write("</body></html>")
+        self._f.close()
+

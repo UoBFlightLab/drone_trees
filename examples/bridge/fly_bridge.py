@@ -15,13 +15,13 @@ from drone_trees.control_automaton import ControlAutomaton
 def behaviour_tree(vehicle):
     mh = MissionHandler('executable_mission.txt')
         
-    preflight_behaviours = [mh.upload_mission(vehicle),
-                            lf.CheckGPS(vehicle, 3),
+    preflight_behaviours = [lf.CheckModeNot(vehicle, 'AUTO'),
+                            mh.upload_mission(vehicle),
+                            lf.CheckGPS(vehicle, 2),
                             lf.CheckEKF(vehicle),
-                            lf.CheckMode(vehicle, "AUTO"),
-                            lf.IsArmed(vehicle)]
+                            lf.IsArmable(vehicle)]
     
-    safety_low_battery = im.safety_module(name="Low Battery",
+    safety_low_battery = im.safety_module(name="Low battery",
                                           check=lf.BatteryLevelAbove(vehicle, 30),
                                           fallback=mh.go_safti(vehicle))
     
@@ -29,14 +29,18 @@ def behaviour_tree(vehicle):
                                         check=lf.CheckDistance(vehicle, 2, 2.),
                                         fallback=mh.go_safti(vehicle))
 
-    safety_ekf = im.safety_module(name="Collision avoidance", 
+    safety_ekf = im.safety_module(name="EKF health", 
                                         check=lf.CheckEKF(vehicle),
                                         fallback=mh.go_safti(vehicle))
     
-    leg_3_5 = im.leg_handler(vehicle, 3, 5)
-    leg_5_7 = im.leg_handler(vehicle, 5, 7)
-    leg_7_9 = im.leg_handler(vehicle, 7, 9)
-    leg_9_11 = im.leg_handler(vehicle, 9, 11)
+    leg_3_5 = im.leg_handler(vehicle, 3, 5, preconds=[lf.CheckGPS(vehicle, 2),
+                                                      lf.BatteryLevelAbove(vehicle, 80)])
+    leg_5_7 = im.leg_handler(vehicle, 5, 7, preconds=[lf.CheckGPS(vehicle, 2),
+                                                      lf.BatteryLevelAbove(vehicle, 70)])
+    leg_7_9 = im.leg_handler(vehicle, 7, 9, preconds=[lf.CheckGPS(vehicle, 2),
+                                                      lf.BatteryLevelAbove(vehicle, 60)])
+    leg_9_11 = im.leg_handler(vehicle, 9, 11, preconds=[lf.CheckGPS(vehicle, 2),
+                                                      lf.BatteryLevelAbove(vehicle, 50)])
     
     bt = im.flight_manager(vehicle,
                            preflight=preflight_behaviours,
