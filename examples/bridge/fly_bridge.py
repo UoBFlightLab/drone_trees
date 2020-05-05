@@ -1,59 +1,117 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Apr 24 11:52:28 2020
+This example uses a bridge inspection scenario to illustrate the use of the
+flight_idioms library in drone_trees to execute a mission.
 
-@author: aeagr
+Note that this does not require any direct import of py_trees libraries: all
+the plumbing is provided by flight_idioms, stitching together behaviours from
+the leaf_nodes library.
+
+Usage:
+    python fly_bridge.py render
+        draws the behaviour tree in DOT, PNG and SVG
+    python fly_bridge.py sitl
+        launches and connects to a SITL simulator
+    python fly_bridge.py <connection>
+        Connects to external MAVLINK interface, e.g. drone telemetry or
+        back door of GCS.
+        
+        For example, run Mission Planner, launch a copter simulator from the 
+        Simulation menu, open TCP host 14550 from the Ctrl+F Temp menu, and
+        then run python fly_bridge.py tcp:127.0.0.1:14550.
+        
+Mission will start with preflight checks and then wait for pilot to arm, set
+mode to Auto, and take-off (just lift the throttle as first waypoint is TO).
+Mission then proceeds through waypoints, provided specific battery level 
+preconditions are satisfied at waypoints 3, 5 and 7.  Mission will skip
+to returning home if they''re not, or if the GPS or battery levels fail
+during the mission.
+        
+See also test_bridge.py, the test script for this controller, 
+and executable_mission.txt, the required waypoint file.
+
 """
 
 from drone_trees import leaf_nodes as lf
 from drone_trees import flight_idioms as im
 from drone_trees.mission_handler import MissionHandler
 from drone_trees.control_automaton import ControlAutomaton
-# from py_trees.composites import Sequence
-# from py_trees.decorators import FailureIsRunning, Inverter, OneShot
 
 def behaviour_tree(vehicle):
-    mh = MissionHandler('executable_mission.txt')
+    """
+    Construct the behaviour tree for the bridge example.
+
+    Parameters
+    ----------
+    vehicle : dronekit.Vehicle
+        Provides MAVLINK connection to drone
+
+    Returns
+    -------
+    bt: py_trees.behaviour.Behaviour 
+        The node at the root of behaviour tree
+
+    """
+    
+    # load the associated mission file
+    mission_handler = MissionHandler('executable_mission.txt')
         
+    # preflight: not in AUTO mode, upload mission, basic GPS, EKF healthy, armable
     preflight_behaviours = [lf.CheckModeNot(vehicle, 'AUTO'),
-                            mh.upload_mission(vehicle),
+                            mission_handler.upload_mission(vehicle),
                             lf.CheckGPS(vehicle, 2),
                             lf.CheckEKF(vehicle),
                             lf.IsArmable(vehicle)]
     
+    # safety check: return home via SAFTI point any time if battery <30%
     safety_low_battery = im.safety_module(name="Low battery",
                                           check=lf.BatteryLevelAbove(vehicle, 30),
-                                          fallback=mh.go_safti(vehicle))
-    
-    safety_avoidance = im.safety_module(name="Collision avoidance", 
-                                        check=lf.CheckDistance(vehicle, 2, 2.),
-                                        fallback=mh.go_safti(vehicle))
+                                          fallback=mission_handler.go_safti(vehicle))
 
+    # minimum distance criterion not implemented here
+    # TODO figure out how to get drone_kit SITL to launch with DISTANCE_SENSOR
+    # safety_avoidance = im.safety_module(name="Collision avoidance", 
+    #                                     check=lf.CheckDistance(vehicle, 2, 2.),
+    #                                     fallback=mh.go_safti(vehicle))
+
+    # safety check: come home via SAFTI any time if EKF bad
     safety_ekf = im.safety_module(name="EKF health", 
-                                        check=lf.CheckEKF(vehicle),
-                                        fallback=mh.go_safti(vehicle))
+                                  check=lf.CheckEKF(vehicle),
+                                  fallback=mission_handler.go_safti(vehicle))
     
+    # leg handlers: for each of the jumps in the waypoint file (4,6,8,10)
+    # define preconditions for proceeding
+    # based only on battery in this example
+    # TODO get SITL to mimic rangefinder and put clearance checks in
+    # proceed from WP 3 to 5 if battery > 80%
     leg_3_5 = im.leg_handler(vehicle, 3, 5, preconds=[lf.CheckGPS(vehicle, 2),
                                                       lf.BatteryLevelAbove(vehicle, 80)])
+    # proceed from WP 5 to 7 if battery > 80%
     leg_5_7 = im.leg_handler(vehicle, 5, 7, preconds=[lf.CheckGPS(vehicle, 2),
                                                       lf.BatteryLevelAbove(vehicle, 70)])
+    # proceed from WP 7 to 9 if battery > 60%
     leg_7_9 = im.leg_handler(vehicle, 7, 9, preconds=[lf.CheckGPS(vehicle, 2),
                                                       lf.BatteryLevelAbove(vehicle, 60)])
+    # proceed from WP 9 to 11 if battery > 50%
     leg_9_11 = im.leg_handler(vehicle, 9, 11, preconds=[lf.CheckGPS(vehicle, 2),
-                                                      lf.BatteryLevelAbove(vehicle, 50)])
+                                                        lf.BatteryLevelAbove(vehicle, 50)])
     
-    bt = im.flight_manager(vehicle,
-                           preflight=preflight_behaviours,
-                           safety=[safety_ekf,
-                                   safety_low_battery],
-                           legs=[leg_3_5,
-                                 leg_5_7,
-                                 leg_7_9,
-                                 leg_9_11])
+    # combine all modules into a single flight manager behavour tree
+    root_node = im.flight_manager(vehicle,
+                                  preflight=preflight_behaviours,
+                                  safety=[safety_ekf,
+                                          safety_low_battery],
+                                  legs=[leg_3_5,
+                                        leg_5_7,
+                                        leg_7_9,
+                                        leg_9_11])
     
-    return(bt)
-
-app = ControlAutomaton(behaviour_tree)
+    return root_node
     
 if __name__ == "__main__":
-    app.main()
+    # run the behaviour tree
+    # drone starts at Clifton Bridge in SITL mode
+    APP = ControlAutomaton(behaviour_tree,
+                           sitl_lat=51.454531, sitl_lon=-2.629158)
+    APP.main()
+    

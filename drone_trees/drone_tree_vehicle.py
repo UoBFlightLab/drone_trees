@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-cascade_vehicle.py:
+drone_tree_vehicle.py:
 
 Custom Vehicle subclass to add DISTANCE_SENSOR data.
 
@@ -14,7 +14,7 @@ Documented at https://dronekit-python.readthedocs.io/en/stable/examples/create_a
 from dronekit import Vehicle
 
 
-class DistanceSensor(object):
+class DistanceSensor():
     """
     Distance sensor readings e.g. from LIDAR or SONAR
     
@@ -34,7 +34,7 @@ class DistanceSensor(object):
         
     def __str__(self):
         """
-        String representation used to print the RawIMU object. 
+        String representation used to print the Distance Sensor measurements. 
         """
         return "DISTANCE_SENSOR: time_boot_ms={},current_distance={},id={}".format(self.time_boot_ms,
                                                                                    self.current_distance,
@@ -43,7 +43,7 @@ class DistanceSensor(object):
    
 class DroneTreeVehicle(Vehicle):
     """
-    Custom vehicle subclass created for the CASCADE project
+    Custom vehicle subclass created for the drone_trees project
     
     Customizations:
         - includes distance sensor attributes
