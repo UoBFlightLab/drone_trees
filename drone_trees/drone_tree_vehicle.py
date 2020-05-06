@@ -43,7 +43,10 @@ class DistanceSensor():
    
 class DroneTreeVehicle(Vehicle):
     """
-    Custom vehicle subclass created for the drone_trees project
+    Custom vehicle subclass created for the drone_trees project.
+    
+    Requires copter 4.04 (note that dronekit_sitl latest is 3.3, which does not
+                          support DISTANCE_SENSOR messages)
     
     Customizations:
         - includes distance sensor attributes
