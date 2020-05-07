@@ -189,6 +189,7 @@ class ControlAutomaton:
         print('Mode: {}'.format(self.vehicle.mode.name))
         print('Altitude: {}'.format(self.vehicle.location.global_relative_frame.alt))
         print('Connected to {}'.format(self._connection_string))
+        print('Next waypoint is {}'.format(self.vehicle.commands.next))
         # exit after timeout or completion
         if self.finished():
             print("**** Flight completed in {} steps".format(self._bt.count))

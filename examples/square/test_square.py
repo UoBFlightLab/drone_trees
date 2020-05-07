@@ -19,7 +19,7 @@ def disp_from_home(veh):
 
 def test_nominal():
     ca = ControlAutomaton(behaviour_tree)
-    ca.startup(force_sitl=True)
+    ca.startup(override_args=['sitl'])
     for ii in range(10):
         ca.tick()
         sleep(1)

@@ -55,11 +55,21 @@ def test_sitl():
     sitl.stop()
 
 
-def test_nominal():
+def test_nominal(copter4 = False):
     """Test nominal case: should complete whole mission"""
-    sitl = start_sitl()
     ca = ControlAutomaton(behaviour_tree)
-    ca.startup(override_args=[sitl.connection_string()])
+    
+    if copter4:
+        # start own sitl and get CA to connect to it
+        # will be copter 4
+        sitl = start_sitl()
+        ca.startup(override_args=[sitl.connection_string()])
+    else:
+        # run CA with 'sitl' argument - it'll run its own through dronekit_sitl
+        # will be copter 3.3
+        sitl=None
+        ca.startup(override_args=['sitl'])
+    
     for ii in range(100):
         ca.tick()
         sleep(1)
@@ -79,7 +89,9 @@ def test_nominal():
     ca.vehicle.channels.overrides['3']=1700
     for ii in range(200):
         ca.tick()
+        # neither of the following two do anything interesting in thr 3.3 sim
         print(ca.vehicle.distance_sensors[1])
+        print(ca.vehicle.rangefinder)
         #TODO add extra checks to see that mission is proceeding
         if ca.finished():
             break
@@ -87,9 +99,12 @@ def test_nominal():
     # should be back on the ground at HOME
     assert ca.vehicle.location.global_relative_frame.alt < 0.3
     ca.cleanup()
-    sitl.close()
+    if sitl:
+        sitl.close()
     print("Test passed")
 
+
 if __name__=='__main__':
-    #test_nominal()
-    test_sitl()
+    test_nominal()
+    #test_nominal(copter4=True)
+    #test_sitl()
