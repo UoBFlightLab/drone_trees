@@ -12,6 +12,7 @@ from dronekit import connect, VehicleMode
 from time import sleep
 from dronekit_sitl import SITL
 
+
 def start_sitl():
     """Launch a SITL using local copy of Copter 4,
     then set up the simulator for a rangefinder"""
@@ -19,12 +20,17 @@ def start_sitl():
     sitl.launch(['--home=51.454531,-2.629158,589,353'])
     
     veh = connect(sitl.connection_string(),vehicle_class=DroneTreeVehicle)
-    veh.parameters['SIM_SONAR_SCALE']=0.001
-    veh.parameters['RNGFND2_SCALING']=10
-    veh.parameters['RNGFND2_PIN']=0
-    veh.parameters['RNGFND2_TYPE']=1
-    veh.parameters['RNGFND2_MAX_CM']=5000
-    veh.parameters['RNGFND2_MIN_CM']=5000
+    
+    veh.parameters['SIM_SONAR_SCALE'] = 0.001
+    veh.parameters['RNGFND2_SCALING'] = 10
+    veh.parameters['RNGFND2_PIN'] = 0
+    veh.parameters['RNGFND2_TYPE'] = 1
+    veh.parameters['RNGFND2_MAX_CM'] = 5000
+    veh.parameters['RNGFND2_MIN_CM'] = 5000
+    
+    veh.parameters['ARMING_CHECK'] = 16384 # mission only
+    veh.parameters['FRAME_CLASS'] = 2 # I'm a hex
+    
     veh.close()
     
     sitl.stop()
@@ -33,7 +39,8 @@ def start_sitl():
     sitl.block_until_ready()
     
     return sitl
-    
+
+
 def test_sitl():
     """Test that the SITL launch function start_sitl works
     and that we can use it to access distance_sensors attributes"""
@@ -43,20 +50,24 @@ def test_sitl():
         sleep(1)
         print(ii)
         print(veh.distance_sensors[1])
+        print(veh.battery)
     veh.close()
     sitl.stop()
 
 
 def test_nominal():
     """Test nominal case: should complete whole mission"""
-    ca = ControlAutomaton(behaviour_tree,
-                          sitl_lat=51.454531, sitl_lon=-2.629158)
-    ca.startup(override_args=['sitl'])
-    for ii in range(10):
+    sitl = start_sitl()
+    ca = ControlAutomaton(behaviour_tree)
+    ca.startup(override_args=[sitl.connection_string()])
+    for ii in range(100):
         ca.tick()
         sleep(1)
+        if ca.vehicle.is_armable:
+            break
     # should still be on the ground
-    assert ca.vehicle.location.global_relative_frame.alt < 0.2
+    assert ca.vehicle.location.global_relative_frame.alt < 0.5
+    assert ca.vehicle.is_armable
     ca.vehicle.arm()
     for ii in range(3):
         ca.tick()
@@ -68,6 +79,7 @@ def test_nominal():
     ca.vehicle.channels.overrides['3']=1700
     for ii in range(200):
         ca.tick()
+        print(ca.vehicle.distance_sensors[1])
         #TODO add extra checks to see that mission is proceeding
         if ca.finished():
             break
@@ -75,6 +87,7 @@ def test_nominal():
     # should be back on the ground at HOME
     assert ca.vehicle.location.global_relative_frame.alt < 0.3
     ca.cleanup()
+    sitl.close()
     print("Test passed")
 
 if __name__=='__main__':

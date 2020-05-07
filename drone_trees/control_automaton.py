@@ -70,8 +70,15 @@ class ControlAutomaton:
 
     def startup(self, override_args=None):
         """
-        Interpret command line arguments and connect to the vehicle
-        if necessary (i.e. not in render mode)
+        Interpret command line arguments, render the tree (if --render)
+        and connect to the vehicle if necessary (i.e. not in render mode) 
+        
+        Parameters:
+            
+            override_args : list of str
+                override command line arguments from function call
+                e.g. for use in testing (see test_bridge.py)
+                
         """
         self._app_name = sys.argv[0]
         if override_args:
@@ -90,7 +97,8 @@ class ControlAutomaton:
   {0} <connection string>
     connect as prescribed and fly the mission""".format((self._app_name)))
         elif my_args[1] == 'sitl':
-            self._sitl = dronekit_sitl.start_default()
+            self._sitl = dronekit_sitl.start_default(lat=self._sitl_lat,
+                                                     lon=self._sitl_lon)
             self._connection_string = self._sitl.connection_string()
             print("Using SITL via {}".format(self._connection_string))
             self.connect()
