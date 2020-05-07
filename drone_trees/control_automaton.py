@@ -68,19 +68,19 @@ class ControlAutomaton:
     def __del__(self):
         self.cleanup()
 
-    def startup(self, force_sitl=False):
+    def startup(self, override_args=None):
         """
         Interpret command line arguments and connect to the vehicle
         if necessary (i.e. not in render mode)
         """
         self._app_name = sys.argv[0]
-        if force_sitl:
-            self._sitl = dronekit_sitl.start_default(self._sitl_lat,
-                                                     self._sitl_lon)
-            self._connection_string = self._sitl.connection_string()
-            print("Using SITL via {}".format(self._connection_string))
-            self.connect()
-        elif len(sys.argv) != 2:
+        if override_args:
+            my_args = [self._app_name]
+            my_args = my_args + override_args
+        else:
+            my_args = sys.argv[:]
+            
+        if len(my_args) != 2:
             print("""Usage:
                   
   {0} sitl
@@ -89,16 +89,16 @@ class ControlAutomaton:
     just render the behaviour tree
   {0} <connection string>
     connect as prescribed and fly the mission""".format((self._app_name)))
-        elif sys.argv[1] == 'sitl':
+        elif my_args[1] == 'sitl':
             self._sitl = dronekit_sitl.start_default()
             self._connection_string = self._sitl.connection_string()
             print("Using SITL via {}".format(self._connection_string))
             self.connect()
-        elif sys.argv[1] == 'render':
+        elif my_args[1] == 'render':
             print("Rendering only")
             self.render()
         else:
-            self._connection_string = sys.argv[1]
+            self._connection_string = my_args[1]
             print("Attempting to connect via {}".format(self._connection_string))
             self.connect()
 
