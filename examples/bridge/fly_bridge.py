@@ -66,7 +66,8 @@ def behaviour_tree(vehicle):
     # safety check: return home via SAFTI point any time if battery <30%
     safety_low_battery = im.safety_module(name="Low battery",
                                           check=lf.BatteryLevelAbove(vehicle, 30),
-                                          fallback=mission_handler.go_safti(vehicle))
+                                          fallback=mission_handler.go_safti(vehicle),
+                                          oneshot=True)
 
     # minimum distance criterion not implemented here
     # TODO figure out how to get drone_kit SITL to launch with DISTANCE_SENSOR

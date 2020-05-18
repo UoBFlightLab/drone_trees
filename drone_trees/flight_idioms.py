@@ -15,9 +15,11 @@ make sense: garbage in, garbage out.
 import py_trees
 from drone_trees import leaf_nodes as lf
 
+
 def safety_module(name="Safety Module",
                   check=py_trees.behaviours.Dummy(name="Safety Check"),
-                  fallback=py_trees.behaviours.Dummy(name="Fallback")
+                  fallback=py_trees.behaviours.Dummy(name="Fallback"),
+                  oneshot=False
                   ):
     """
     A standard tree for use in the flight_manager idiom as a global safety
@@ -46,6 +48,11 @@ def safety_module(name="Safety Module",
             clears.
             FAILURE would be worrying here and would stop the whole tree.
         The default is py_trees.behaviours.Dummy(name="Fallback").
+    oneshot : bool, optional
+            True encapsulates the fallback behaviour in a oneshot resulting
+            in an unrepeatable response.
+            False allows for a repeatable response.
+        The default is False
 
     Returns
     -------
@@ -53,7 +60,14 @@ def safety_module(name="Safety Module",
         Root node of the generated tree.
 
     """
-    node = py_trees.composites.Selector(name=name, children=[check, fallback])
+    if oneshot:
+        node = py_trees.composites.Selector(
+            name=name,
+            children=[check, py_trees.decorators.OneShot(fallback)])
+    else:
+        node = py_trees.composites.Selector(
+            name=name,
+            children=[check, fallback])
     return node
 
 

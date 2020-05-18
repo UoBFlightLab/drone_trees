@@ -207,13 +207,13 @@ class SetCounter(py_trees.behaviour.Behaviour):
 
     def update(self):
         cur_wpn = self._vehicle.commands.next 
-        if cur_wpn <= self._wpn:
+        if cur_wpn < self._wpn:
             self.feedback_message = 'Advancing WP counter from {} to {}'.format(cur_wpn,self._wpn)
             print(self.feedback_message)
             self._vehicle.commands.next = self._wpn
             return py_trees.common.Status.SUCCESS
         else:
-            self.feedback_message = 'Cannot move WP counter backwards from {} to {}'.format((cur_wpn,self._wpn))
+            self.feedback_message = 'Cannot move WP counter backwards from {} to {}'.format(cur_wpn,self._wpn)
             return py_trees.common.Status.FAILURE
             
 
