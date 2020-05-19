@@ -154,7 +154,7 @@ def wait_for_wp_hold(vehicle, wpn):
     at_wp.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
     return at_wp
 
-def leg_handler(vehicle, wp1, wp2, preconds):
+def leg_handler(vehicle, wp1, wp2, preconds=[]):
     """
     Manage procession to next leg of a mission.
 
@@ -196,14 +196,20 @@ def leg_handler(vehicle, wp1, wp2, preconds):
                                                                lf.SetCounter(vehicle, wp2)])
     wait_then_set_ctr.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
 
-    precond_priority = py_trees.composites.Selector(name="Preconds for {} to {}".format(wp1, wp2))
-    for precond in preconds:
-        precond_priority.add_child(py_trees.decorators.Inverter(precond))
-    precond_priority.add_child(wait_then_set_ctr)
+    if not preconds:
+        lh = py_trees.composites.Sequence(name='Transition handler {} to {}'.format(wp1, wp2),
+                                          children=[wait_for_wp_hold(vehicle, wp1),
+                                                    wait_then_set_ctr])
+    else:
+        precond_priority = py_trees.composites.Selector(name="Preconds for {} to {}".format(wp1, wp2))
+        for precond in preconds:
+            precond_priority.add_child(py_trees.decorators.Inverter(precond))
+        precond_priority.add_child(wait_then_set_ctr)
 
-    lh = py_trees.composites.Sequence(name='Transition handler {} to {}'.format(wp1, wp2),
-                                      children=[wait_for_wp_hold(vehicle, wp1),
-                                                precond_priority])
+        lh = py_trees.composites.Sequence(name='Transition handler {} to {}'.format(wp1, wp2),
+                                          children=[wait_for_wp_hold(vehicle, wp1),
+                                                    precond_priority])
+    
     lh_dec = py_trees.decorators.OneShot(py_trees.decorators.FailureIsRunning(lh))
     return lh_dec
 
@@ -234,6 +240,10 @@ def flight_manager(vehicle, preflight, safety, legs):
         that itself is the argument to the ControlAutomaton
 
     """
+    check_mode_auto = lf.CheckMode(vehicle, 'AUTO')
+
+    invtr_plus_mdchk = py_trees.decorators.Inverter(check_mode_auto)
+    
     safety_parallel = py_trees.composites.Parallel(name="Safety Monitor",
                                                    children=safety,
                                                    policy=py_trees.common.ParallelPolicy.SuccessOnAll(synchronise=False))
@@ -241,17 +251,18 @@ def flight_manager(vehicle, preflight, safety, legs):
 
     leg_manager = py_trees.composites.Parallel(name="Leg Handlers",
                                                children=legs,
-                                               policy=py_trees.common.ParallelPolicy.SuccessOnAll(synchronise=False))
+                                               policy=py_trees.common.ParallelPolicy.SuccessOnSelected(children=[legs[-1]], synchronise=False))
 
     mission = py_trees.composites.Selector(name="Mission Manager",
-                                           children=[invtr_plus_parallel,
+                                           children=[invtr_plus_mdchk,
+                                                     invtr_plus_parallel,
                                                      leg_manager])
 
     pre_flight = py_trees.composites.Sequence(name="Preflight checks",
                                               children=[py_trees.decorators.FailureIsRunning(b) 
                                                         for b in preflight])
 
-    fm_root = py_trees.decorators.OneShot(py_trees.composites.Sequence(name="FLight manager",
+    fm_root = py_trees.decorators.OneShot(py_trees.composites.Sequence(name="FLight Manager",
                                                                        children=[pre_flight,
                                                                                  wait_for_auto_take_off(vehicle),
                                                                                  mission,

@@ -96,7 +96,9 @@ def behaviour_tree(vehicle):
     # proceed from WP 9 to 11 if battery > 50%
     leg_9_11 = im.leg_handler(vehicle, 9, 11, preconds=[lf.CheckGPS(vehicle, 2),
                                                         lf.BatteryLevelAbove(vehicle, 50)])
-    
+    # proceed from WP 11 to 12 with no preconditions
+    leg_11_12 = im.leg_handler(vehicle, 11, 12)
+
     # combine all modules into a single flight manager behavour tree
     root_node = im.flight_manager(vehicle,
                                   preflight=preflight_behaviours,
@@ -105,7 +107,8 @@ def behaviour_tree(vehicle):
                                   legs=[leg_3_5,
                                         leg_5_7,
                                         leg_7_9,
-                                        leg_9_11])
+                                        leg_9_11,
+                                        leg_11_12])
     
     return root_node
     
