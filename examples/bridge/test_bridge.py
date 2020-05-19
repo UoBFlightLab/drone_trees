@@ -31,6 +31,8 @@ def start_sitl():
     veh.parameters['SIM_BATT_VOLTAGE'] = 12.59
     veh.parameters['BATT_MONITOR'] = 4
 
+    veh.parameters['TERRAIN_ENABLE'] = 0
+
     veh.parameters['ARMING_CHECK'] = 16384 # mission only
     veh.parameters['FRAME_CLASS'] = 2 # I'm a hex
 
@@ -131,7 +133,80 @@ def test_nominal(copter4=True):
     print("Test passed")
 
 
+def test_lowbat(copter4=True):
+    """
+    Verify low battery safety behaviour. The vehicle is held at waypoint 2 in
+    until battery level falls under 36%.
+    """
+    ca = ControlAutomaton(behaviour_tree)
+
+    if copter4:
+        # start own sitl and get CA to connect to it
+        # will be copter 4
+        sitl = start_sitl()
+        ca.startup(override_args=[sitl.connection_string()])
+    else:
+        # run CA with 'sitl' argument - it'll run its own through dronekit_sitl
+        # will be copter 3.3
+        sitl = None
+        ca.startup(override_args=['sitl'])
+    # speed up simulation until vehicle is armable
+    ca.vehicle.parameters['SIM_SPEEDUP'] = 5
+    for ii in range(100):
+        ca.tick()
+        sleep(1)
+        if ca.vehicle.is_armable:
+            break
+    # resume to normal speed
+    #ca.vehicle.parameters['SIM_SPEEDUP'] = 1
+
+    # should still be on the ground
+    assert ca.vehicle.location.global_relative_frame.alt < 0.5
+    assert ca.vehicle.is_armable
+    ca.vehicle.arm()
+    for ii in range(3):
+        ca.tick()
+        sleep(1)
+    # should be on the ground
+    assert ca.vehicle.location.global_relative_frame.alt < 0.2
+    # switch to auto and lift the throttle to trigger auto takeoff
+    ca.vehicle.mode = VehicleMode('AUTO')
+    ca.vehicle.channels.overrides['3'] = 1700
+    # log as we visit each waypoint
+    wp_log = {2: False,
+              3: False,
+              5: False,
+              7: False,
+              9: False,
+              11: False,
+              12: False,
+              13: False}
+    while not ca.finished():
+        ca.tick()
+        if ca.vehicle.commands.next in wp_log.keys():
+            wp_log[ca.vehicle.commands.next] = True
+        # hold vehicle at waypoint 2 as long as battery level is above 36%
+        if ca.vehicle.commands.next >= 2 and ca.vehicle.battery.level > 36:
+            ca.vehicle.commands.next = 2
+
+        print(wp_log)
+        sleep(1)
+    # should skip waypoints 7 and 9
+    assert not wp_log[9], 'Mission was not skipped'
+    # should visit SAFTI
+    assert wp_log[11], 'SAFTI was not visited'
+    # should visit final waypoint
+    assert wp_log[13], 'Mission was not completed'
+    # should be back on the ground at HOME
+    assert ca.vehicle.location.global_relative_frame.alt < 0.3
+    # close down ControlAutomaton
+    ca.cleanup()
+    if sitl:
+        sitl.stop()
+    print("Test passed")
+
 if __name__ == '__main__':
     test_nominal()
-    #test_nominal(copter4=True)
+    #test_nominal(copter4=False)
+    #test_lowbat()
     #test_sitl()
