@@ -86,16 +86,20 @@ def behaviour_tree(vehicle):
     # TODO get SITL to mimic rangefinder and put clearance checks in
     # proceed from WP 3 to 5 if battery > 80%
     leg_3_5 = im.leg_handler(vehicle, 3, 5, preconds=[lf.CheckGPS(vehicle, 2),
-                                                      lf.BatteryLevelAbove(vehicle, 80)])
+                                                      lf.BatteryLevelAbove(vehicle, 80),
+                                                      lf.CheckDistance(vehicle, 1, 45.)])
     # proceed from WP 5 to 7 if battery > 80%
     leg_5_7 = im.leg_handler(vehicle, 5, 7, preconds=[lf.CheckGPS(vehicle, 2),
-                                                      lf.BatteryLevelAbove(vehicle, 70)])
+                                                      lf.BatteryLevelAbove(vehicle, 70),
+                                                      lf.CheckDistance(vehicle, 1, 15.)])
     # proceed from WP 7 to 9 if battery > 60%
     leg_7_9 = im.leg_handler(vehicle, 7, 9, preconds=[lf.CheckGPS(vehicle, 2),
-                                                      lf.BatteryLevelAbove(vehicle, 60)])
+                                                      lf.BatteryLevelAbove(vehicle, 60),
+                                                      lf.CheckDistance(vehicle, 1, 8.)])
     # proceed from WP 9 to 11 if battery > 50%
     leg_9_11 = im.leg_handler(vehicle, 9, 11, preconds=[lf.CheckGPS(vehicle, 2),
-                                                        lf.BatteryLevelAbove(vehicle, 50)])
+                                                        lf.BatteryLevelAbove(vehicle, 50),
+                                                        lf.CheckDistance(vehicle, 1, 4.)])
     # proceed from WP 11 to 12 with no preconditions
     leg_11_12 = im.leg_handler(vehicle, 11, 12)
 
