@@ -71,9 +71,9 @@ def behaviour_tree(vehicle):
 
     # minimum distance criterion not implemented here
     # TODO figure out how to get drone_kit SITL to launch with DISTANCE_SENSOR
-    # safety_avoidance = im.safety_module(name="Collision avoidance", 
-    #                                     check=lf.CheckDistance(vehicle, 2, 2.),
-    #                                     fallback=mh.go_safti(vehicle))
+    safety_avoidance = im.safety_module(name="Collision avoidance", 
+                                        check=lf.CheckDistance(vehicle, 1, 2.),
+                                        fallback=mission_handler.go_safti(vehicle))
 
     # safety check: come home via SAFTI any time if EKF bad
     safety_ekf = im.safety_module(name="EKF health", 
@@ -103,7 +103,8 @@ def behaviour_tree(vehicle):
     root_node = im.flight_manager(vehicle,
                                   preflight=preflight_behaviours,
                                   safety=[safety_ekf,
-                                          safety_low_battery],
+                                          safety_low_battery,
+                                          safety_avoidance],
                                   legs=[leg_3_5,
                                         leg_5_7,
                                         leg_7_9,
