@@ -675,7 +675,7 @@ class BatteryLevelAbove(py_trees.behaviour.Behaviour):
 
     """
     def __init__(self, vehicle, level):
-        super(BatteryLevelAbove, self).__init__(f"Battery over {level}% ?")
+        super(BatteryLevelAbove, self).__init__('Battery over {}% ?'.format(level))
         self._vehicle = vehicle
         self._level = level
 

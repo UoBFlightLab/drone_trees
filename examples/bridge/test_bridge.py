@@ -5,6 +5,7 @@ Created on Mon Apr 27 12:36:33 2020
 @author: aeagr
 """
 
+import platform
 from time import sleep
 from dronekit import connect, VehicleMode
 from dronekit_sitl import SITL
@@ -15,8 +16,17 @@ from fly_bridge import behaviour_tree
 
 def start_sitl():
     """Launch a SITL using local copy of Copter 4,
-    then set up the simulator for a rangefinder"""
-    sitl = SITL('sitl/ArduCopter.exe')
+    then set up the simulator for a rangefinder.
+    Only works for Windows or Linux.  Including
+    binary in the project is ugly, but only used
+    for testing."""
+    if platform.system()=='Linux':
+        sitl_path='sitl/linux/arducopter'
+    elif platform.system()=='Windows':
+        sitl_path='sitl/windows/ArduCopter.exe'
+    else:
+        sitl_path=''
+    sitl = SITL(sitl_path)
     sitl.launch(['--home=51.454531,-2.629158,589,353'])
 
     veh = connect(sitl.connection_string(), vehicle_class=DroneTreeVehicle)

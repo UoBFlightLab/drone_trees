@@ -12,7 +12,7 @@ drone_trees is compatible with python 3.7 and it needs the following dependencie
 * Optional `pyttsx3` V2.87 for voice feedback. If using windows `pypiwin32` is also needed.
 
 To install:
-* On Linux, `pip install py_trees dronekit dronekit_sitl` (recommended in a virtual environment) and then local install of drone_trees
+* On Linux, `pip install py_trees dronekit dronekit_sitl` (recommended in a virtual environment) and then local install of drone_trees using `pip install -e .` in the root folder of this repository.
 * On Windows, in the root folder of this repository, `conda env create drone_trees.yml` followed by `conda develop .` 
 
 ## Examples
