@@ -549,25 +549,25 @@ class SimpleTakeoff(py_trees.behaviour.Behaviour):
         return py_trees.common.Status.SUCCESS
 
 
-class PlaySound(py_trees.behaviour.Behaviour):
-
-    def __init__(self, msg, voiceAst, returnFailure=None):
-        super(PlaySound, self).__init__("Play sound %s" % msg)
-        self._msg = msg
-        self._voiceAst = voiceAst
-        self._returnFailure = returnFailure
-
-    def update(self):
-        print("[WarningSound::update] Adding: \"" + self._msg + "\"")
-        # Adding message to the Voice Assistant queue
-        if self._voiceAst:
-            self._voiceAst.add_say(self._msg)
-        else:
-            print("Muted")
-        if self._returnFailure:
-            return py_trees.common.Status.FAILURE
-        else:
-            return py_trees.common.Status.SUCCESS
+#class PlaySound(py_trees.behaviour.Behaviour):
+#
+#    def __init__(self, msg, voiceAst, returnFailure=None):
+#        super(PlaySound, self).__init__("Play sound %s" % msg)
+#        self._msg = msg
+#        self._voiceAst = voiceAst
+#        self._returnFailure = returnFailure
+#
+#    def update(self):
+#        print("[WarningSound::update] Adding: \"" + self._msg + "\"")
+#        # Adding message to the Voice Assistant queue
+#        if self._voiceAst:
+#            self._voiceAst.add_say(self._msg)
+#        else:
+#            print("Muted")
+#        if self._returnFailure:
+#            return py_trees.common.Status.FAILURE
+#        else:
+#            return py_trees.common.Status.SUCCESS
 
 
 class AltGlobalAbove(py_trees.behaviour.Behaviour):
