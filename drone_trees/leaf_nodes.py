@@ -1,6 +1,5 @@
 import py_trees
 import math
-import os
 from dronekit import VehicleMode, LocationGlobal, LocationGlobalRelative
 
 
@@ -109,7 +108,7 @@ class SetParam(py_trees.behaviour.Behaviour):
 
 class Land(py_trees.behaviour.Behaviour):
     """
-    Action leaf node: switches flight mode to Return-to-Land and returns
+    Action leaf node: switches flight mode to Return-to-Launch and returns
     SUCCESS
     Parameters
     ----------
@@ -203,16 +202,16 @@ class CheckDistance(py_trees.behaviour.Behaviour):
 
     """
     def __init__(self, vehicle, sensor_id, clearance):
-        super(CheckDistance, self).__init__("Distance {} > {} ?".format(sensor_id, clearance))
-        self._vehicle = vehicle
-        self._sensor_id = sensor_id
+        super(CheckDistance, self).__init__(
+            "Distance {} > {} ?".format(sensor_id, clearance))
+        self._veh = vehicle
+        self._id = sensor_id
         self._clearance = clearance
 
     def update(self):
-        current_dist = self._vehicle.distance_sensors[self._sensor_id].current_distance
+        current_dist = self._veh.distance_sensors[self._id].current_distance
         if current_dist is None:
-            self.feedback_message = ('Nothing from sensor {}'
-                                     .format(self._sensor_id))
+            self.feedback_message = ('Nothing from sensor {}'.format(self._id))
             return py_trees.common.Status.FAILURE
         elif current_dist/100. > self._clearance:
             self.feedback_message = 'Yes, it''s {}'.format(current_dist/100.)
@@ -320,21 +319,6 @@ class CheckCounterLessThan(py_trees.behaviour.Behaviour):
             return py_trees.common.Status.SUCCESS
         else:
             self.feedback_message = 'No, it''s {}.'.format(next_wp)
-            return py_trees.common.Status.FAILURE
-
-
-class CheckLanding(py_trees.behaviour.Behaviour):
-
-    def __init__(self, vehicle):
-        super(CheckLanding, self).__init__("Check Landing")
-        self._vehicle = vehicle
-        self._cmds = self._vehicle.commands
-        self._cmds.download()
-
-    def update(self):
-        if self._cmds.count > 1 and self._cmds.next == self._cmds.count:
-            return py_trees.common.Status.SUCCESS
-        else:
             return py_trees.common.Status.FAILURE
 
 
@@ -781,7 +765,8 @@ class LatSpeedUnder(py_trees.behaviour.Behaviour):
 
     """
     def __init__(self, vehicle, max_speed):
-        super(LatSpeedUnder, self).__init__("Lat speed < {}?".format(max_speed))
+        super(LatSpeedUnder, self).__init__(
+            "Lat speed < {}?".format(max_speed))
         self._vehicle = vehicle
         self._max_speed = max_speed
 
@@ -794,26 +779,3 @@ class LatSpeedUnder(py_trees.behaviour.Behaviour):
         else:
             self.feedback_message = 'No, speed is {}'.format(current_speed)
             return py_trees.common.Status.FAILURE
-
-
-class log:
-    def __init__(self, root, path):
-        super(log, self).__init__()
-        self._root = root
-        self._path = path
-
-        # Make HTML file for the html log
-        self._bt_log_path = os.path.join(self._path, 'BT')
-        self._filename = os.path.join(self._bt_log_path, 'bt_log.html')
-        self._f = open(self._filename, 'w')
-        self._f.write('<html><head><title>Foo</title><body>')
-
-    def logging(self, iteration, dot=False):
-        self._f.write("<p>******************** %i ********************</p>" % iteration)
-        self._f.write(py_trees.display.xhtml_tree(self._root, show_status=True))
-        if dot:
-            py_trees.display.render_dot_tree(self._root, name='tick_%i' % iteration, target_directory=self._bt_log_path)
-
-    def terminate(self):
-        self._f.write("</body></html>")
-        self._f.close()
