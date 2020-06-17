@@ -391,6 +391,27 @@ def test_SetCounter(copter_sitl_auto_to):
     vehicle.close()                              # close local vehicle instance
 
 
+def test_TriggerCamera(copter_sitl_ground):
+    """Verify that TriggerCamera behaviour captures an image and responds
+    SUCCESS"""
+
+    # Make a local vehicle instance
+    vehicle = connect(copter_sitl_ground.connection_string(), wait_ready=True)
+
+    #"""-----  Expect SUCCESS -----"""
+
+    ekf_check_healthy = lf.TriggerCamera(vehicle)              # trigger camera
+    ekf_check_healthy.tick_once()                # tick behaviour to get status
+
+    @vehicle.on_message('CAMERA_FEEDBACK')
+    def listener(self, name, msg):
+        # Check single image captured
+        assert msg.img_idx == 1
+    
+    assert ekf_check_healthy.status == Status.SUCCESS
+
+    vehicle.close()                              # close local vehicle instance
+
 def test_SetParam(copter_sitl_ground):
     """Verify that the SetParam behaviour changes parameter value and responds
     SUCCESS"""
