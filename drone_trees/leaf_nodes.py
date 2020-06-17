@@ -362,6 +362,33 @@ class SetCounter(py_trees.behaviour.Behaviour):
             return py_trees.common.Status.FAILURE
 
 
+class TriggerCamera(py_trees.behaviour.Behaviour):
+    """
+    Action leaf node that takes a picture using the DO_DIGICAM_CONTROL command
+    and returns SUCCESS. Note that camera must be setup according to following:
+    https://ardupilot.org/copter/docs/common-cameras-and-gimbals.html
+
+    Parameters
+    ----------
+    vehicle : dronekit.Vehicle
+        The MAVLINK interface
+
+    Returns
+    -------
+    node : py_trees.common.Status
+        Status of the leaf node behaviour
+
+    """
+    def __init__(self, vehicle):
+        super(TriggerCamera, self).__init__("Trigger Camera")
+        self._vehicle = vehicle
+
+    def update(self):
+        self._vehicle.message_factory.digicam_control_send(0, 0, 0, 0, 0, 0, 1,
+                                                           0, 0, 0)
+        return py_trees.common.Status.SUCCESS
+
+
 class CheckMode(py_trees.behaviour.Behaviour):
     """
     Condition leaf node that checks vehicle flight mode is in agreement with
