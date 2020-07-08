@@ -15,8 +15,9 @@ import dronekit_sitl
 from dronekit import connect
 from py_trees.trees import BehaviourTree
 from py_trees.visitors import DebugVisitor, SnapshotVisitor
-from py_trees.display import render_dot_tree, unicode_tree
+from py_trees.display import unicode_tree
 from py_trees.common import Status
+from drone_trees.utilities import render_dot_tree
 from drone_trees.drone_tree_vehicle import DroneTreeVehicle
 
 class ControlAutomaton:

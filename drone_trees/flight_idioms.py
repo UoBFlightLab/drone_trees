@@ -68,6 +68,9 @@ def safety_module(name="Safety Module",
         node = py_trees.composites.Selector(
             name=name,
             children=[check, fallback])
+    
+    node.blackbox_level = py_trees.common.BlackBoxLevel.COMPONENT
+    
     return node
 
 
@@ -211,6 +214,7 @@ def leg_handler(vehicle, wp1, wp2, preconds=[]):
                                                     precond_priority])
     
     lh_dec = py_trees.decorators.OneShot(py_trees.decorators.FailureIsRunning(lh))
+    lh.blackbox_level = py_trees.common.BlackBoxLevel.COMPONENT
     return lh_dec
 
 def flight_manager(vehicle, preflight, safety, legs):
