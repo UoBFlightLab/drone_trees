@@ -1,12 +1,23 @@
 # -*- coding: utf-8 -*-
+###############################################################################
+# License: MIT License
+#    https://raw.githubusercontent.com/UoBFlightLab/drone_trees/master/LICENSE
+###############################################################################
+# Author: Hirad Goudarzi
+# Role: PhD Candidate
+# Organisation: University of Bristol
+# Version: 2.0.0
+# Email: hirad.goudarzi@bristol.ac.uk
+###############################################################################
 """
-Created on Fri Apr 24 12:20:27 2020
 
-@author: aeagr
+control_automaton.py:
 
-Provides the ControlAutomaton class for drone_trees
+Top-level app class providing functionality for running and testing
+behaviour trees for drone control via MAVLINK.
 
 """
+###############################################################################
 
 import sys
 import socket
@@ -15,9 +26,11 @@ import dronekit_sitl
 from dronekit import connect
 from py_trees.trees import BehaviourTree
 from py_trees.visitors import DebugVisitor, SnapshotVisitor
-from py_trees.display import render_dot_tree, unicode_tree
+from py_trees.display import unicode_tree
 from py_trees.common import Status
+from drone_trees.utilities import render_dot_tree
 from drone_trees.drone_tree_vehicle import DroneTreeVehicle
+
 
 class ControlAutomaton:
     """
@@ -71,14 +84,14 @@ class ControlAutomaton:
     def startup(self, override_args=None):
         """
         Interpret command line arguments, render the tree (if --render)
-        and connect to the vehicle if necessary (i.e. not in render mode) 
-        
+        and connect to the vehicle if necessary (i.e. not in render mode)
+
         Parameters:
-            
+
             override_args : list of str
                 override command line arguments from function call
                 e.g. for use in testing (see test_bridge.py)
-                
+
         """
         self._app_name = sys.argv[0]
         if override_args:
@@ -86,10 +99,10 @@ class ControlAutomaton:
             my_args = my_args + override_args
         else:
             my_args = sys.argv[:]
-            
+
         if len(my_args) != 2:
             print("""Usage:
-                  
+
   {0} sitl
     run with built-in SITL simulator
   {0} render
@@ -107,7 +120,7 @@ class ControlAutomaton:
             self.render()
         else:
             self._connection_string = my_args[1]
-            print("Attempting to connect via {}".format(self._connection_string))
+            print(f"Attempting to connect via {self._connection_string}")
             self.connect()
 
     def render(self, file_name=None):
@@ -141,7 +154,7 @@ class ControlAutomaton:
 
         """
         try:
-            self.vehicle = connect(self._connection_string, wait_ready=True, \
+            self.vehicle = connect(self._connection_string, wait_ready=True,
                                    vehicle_class=DroneTreeVehicle)
         except socket.error as e:
             print(e)
@@ -186,10 +199,10 @@ class ControlAutomaton:
                                previously_visited=self._snapshot_visitor.visited))
             print("+++++++++++++++++++++")
         print(self.vehicle.battery)
-        print('Mode: {}'.format(self.vehicle.mode.name))
-        print('Altitude: {}'.format(self.vehicle.location.global_relative_frame.alt))
-        print('Connected to {}'.format(self._connection_string))
-        print('Next waypoint is {}'.format(self.vehicle.commands.next))
+        print(f'Mode: {self.vehicle.mode.name}')
+        print(f'Altitude: {self.vehicle.location.global_relative_frame.alt}')
+        print(f'Connected to {self._connection_string}')
+        print(f'Next waypoint is {self.vehicle.commands.next}')
         # exit after timeout or completion
         if self.finished():
             print("**** Flight completed in {} steps".format(self._bt.count))
@@ -211,7 +224,7 @@ class ControlAutomaton:
 
         """
         if self.vehicle:
-            print("Disconnecting from vehicle on {}".format(self._connection_string))
+            print(f"Disconnecting from vehicle on {self._connection_string}")
             self.vehicle.close()
         if self._sitl:
             print("Shutting down SITL instance")
@@ -240,4 +253,3 @@ class ControlAutomaton:
             except KeyboardInterrupt:
                 self.cleanup()
             self.cleanup()
-            

@@ -1,3 +1,25 @@
+# -*- coding: utf-8 -*-
+###############################################################################
+# License: MIT License
+#    https://raw.githubusercontent.com/UoBFlightLab/drone_trees/master/LICENSE
+###############################################################################
+# Author: Hirad Goudarzi
+# Role: PhD Candidate
+# Organisation: University of Bristol
+# Version: 2.0.0
+# Email: hirad.goudarzi@bristol.ac.uk
+###############################################################################
+"""
+
+leaf_node.py:
+
+Low-level leaf nodes representing drone actions and conditions.  The designer
+can use these in their flight idioms or to directly populate their tree
+templates.
+
+"""
+###############################################################################
+
 import py_trees
 import math
 from dronekit import VehicleMode, LocationGlobal, LocationGlobalRelative

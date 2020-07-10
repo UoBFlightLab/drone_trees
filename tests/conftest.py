@@ -1,3 +1,28 @@
+# -*- coding: utf-8 -*-
+###############################################################################
+# License: MIT License
+#    https://raw.githubusercontent.com/UoBFlightLab/drone_trees/master/LICENSE
+###############################################################################
+# Author: Hirad Goudarzi
+# Role: PhD Candidate
+# Organisation: University of Bristol
+# Version: 2.0.0
+# Email: hirad.goudarzi@bristol.ac.uk
+###############################################################################
+"""
+
+conftest.py:
+
+Provides pytest fixtures for use in the testing framework. Fixutres include
+Ardupilot SITL instances in the following states:
+
+    1) Ground startup
+    2) Flying in AUTO mode
+    3) Take-off in GUIDED
+
+"""
+###############################################################################
+
 import pytest
 import os
 import sys

@@ -1,3 +1,23 @@
+# -*- coding: utf-8 -*-
+###############################################################################
+# License: MIT License
+#    https://raw.githubusercontent.com/UoBFlightLab/drone_trees/master/LICENSE
+###############################################################################
+# Author: Hirad Goudarzi
+# Role: PhD Candidate
+# Organisation: University of Bristol
+# Version: 2.0.0
+# Email: hirad.goudarzi@bristol.ac.uk
+###############################################################################
+"""
+
+test_leaf_nodes.py:
+
+Unit test for all leaf nodes
+
+"""
+###############################################################################
+
 import sys
 from time import sleep
 from os.path import join, abspath
