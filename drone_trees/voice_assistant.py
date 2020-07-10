@@ -5,13 +5,14 @@ from queue import Queue, Empty
 import threading
 import time
 
+
 class VoiceAssistant(threading.Thread):
     def __init__(self):
         super(VoiceAssistant, self).__init__(daemon=True)
         self._engine = pyttsx3.init()
         self._q = Queue()
         self._loop_should_exit = False
-    
+
     def kill(self):
         self._loop_should_exit = True
         print('----------Kill-----------')

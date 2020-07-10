@@ -1,12 +1,27 @@
 # -*- coding: utf-8 -*-
+###############################################################################
+# License: MIT License
+#    https://raw.githubusercontent.com/UoBFlightLab/drone_trees/master/LICENSE
+###############################################################################
+# Author: Hirad Goudarzi
+# Role: PhD Candidate
+# Organisation: University of Bristol
+# Version: 2.0.0
+# Email: hirad.goudarzi@bristol.ac.uk
+###############################################################################
 """
-Created on Fri Apr 24 09:45:52 2020
 
-@author: aeagr
+mission_handler.py:
+
+Provides behaviour tree functionality for mission handling, including mission
+import, validation, upload to drone, and SAFTI waypoint functions.
+
 """
+###############################################################################
 
 from pymavlink.mavwp import MAVWPLoader
-from drone_trees.leaf_nodes import SetCounter, MissionUpload #, MissionVerify
+from drone_trees.leaf_nodes import SetCounter, MissionUpload  # , MissionVerify
+
 
 class MissionHandler:
     """Provides behaviour tree functionality for mission handling, including
@@ -43,8 +58,8 @@ class MissionHandler:
 
         """
         for w in self._wp.wpoints:
-            print(w.seq, w.command, \
-                  w.param1, w.param2, w.param3, w.param4, \
+            print(w.seq, w.command,
+                  w.param1, w.param2, w.param3, w.param4,
                   w.x, w.y, w.z)
 
     def validate_mission(self):
@@ -59,8 +74,10 @@ class MissionHandler:
         None.
 
         """
-        assert self._wp.wpoints[0].command == 22, 'First waypoint should be TakeOff (22)'
-        assert self._wp.wpoints[-1].command == 21, 'Last waypoint should be Landing (21)'
+        assert self._wp.wpoints[0].command == 22, 'First waypoint should be \
+            TakeOff (22)'
+        assert self._wp.wpoints[-1].command == 21, 'Last waypoint should be \
+            Landing (21)'
 
     def get_safti(self):
         """
@@ -76,7 +93,7 @@ class MissionHandler:
         """
         jump_wps = [wp for wp in self._wp.wpoints if wp.command == 177]
         assert len(jump_wps) > 0, 'Need at least one jump to identify SAFTI'
-        #TODO slicker set comprehension of the item below?
+        # TODO slicker set comprehension of the item below?
         safti_set = set([wp.param1 for wp in jump_wps])
         assert len(safti_set) == 1, 'Must have unique SAFTI'
         self._safti_num = min(safti_set)
@@ -121,4 +138,3 @@ class MissionHandler:
     # TODO implement the verification in leaf_nodes
     # def verify_mission(self,vehicle):
     #     return(MissionVerify(vehicle,self._wp.wpoints))
-        

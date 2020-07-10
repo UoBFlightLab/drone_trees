@@ -1,8 +1,17 @@
 # -*- coding: utf-8 -*-
+###############################################################################
+# License: MIT License
+#    https://raw.githubusercontent.com/UoBFlightLab/drone_trees/master/LICENSE
+###############################################################################
+# Author: Hirad Goudarzi
+# Role: PhD Candidate
+# Organisation: University of Bristol
+# Version: 2.0.0
+# Email: hirad.goudarzi@bristol.ac.uk
+###############################################################################
 """
-Created on Fri Apr 24 09:47:59 2020
 
-@author: aeagr
+flight_idiom.py:
 
 Provide a series of standard behaviour tree constructs to assist the
 development of trees for drone control.  In the limit, designer can use
@@ -11,6 +20,8 @@ offers some degree of safety assurance, but only if the connected parts
 make sense: garbage in, garbage out.
 
 """
+###############################################################################
+
 
 import py_trees
 from drone_trees import leaf_nodes as lf
@@ -68,9 +79,9 @@ def safety_module(name="Safety Module",
         node = py_trees.composites.Selector(
             name=name,
             children=[check, fallback])
-    
+
     node.blackbox_level = py_trees.common.BlackBoxLevel.COMPONENT
-    
+
     return node
 
 
@@ -93,12 +104,11 @@ def wait_for_auto_take_off(vehicle):
         Root node of the generated tree.
 
     """
-    sq = py_trees.composites.Sequence(name="Wait for AUTO takeoff",
-                                      children=[lf.CheckMode(vehicle, "AUTO"),
-                                                lf.IsArmed(vehicle),
-                                                lf.AltLocalAbove(vehicle, 0.1)])
-    node = py_trees.decorators.FailureIsRunning(sq)
-    #bt.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
+    node = py_trees.decorators.FailureIsRunning(py_trees.composites.Sequence(
+        name="Wait for AUTO takeoff",
+        children=[lf.CheckMode(vehicle, "AUTO"),
+                  lf.IsArmed(vehicle),
+                  lf.AltLocalAbove(vehicle, 0.1)]))
     return node
 
 
@@ -119,9 +129,9 @@ def wait_for_landing(vehicle):
         Root node of the generated tree.
 
     """
-    node = py_trees.decorators.FailureIsRunning(py_trees.decorators.Inverter(lf.IsArmed(vehicle)))
+    node = py_trees.decorators.FailureIsRunning(
+        py_trees.decorators.Inverter(lf.IsArmed(vehicle)))
     node.name = "Wait for landing"
-    #bt.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
     return node
 
 
@@ -148,14 +158,20 @@ def wait_for_wp_hold(vehicle, wpn):
     """
     # TODO think about logic here, as will not fail if this WP is skipped over
     # maybe need check = wp with fallback to check < wp
-    at_wp = py_trees.composites.Sequence(name=("Is vehicle at\n waypoint %i ?" % wpn),
-                                         children=[lf.CheckCounterLessThan(vehicle, wpn+1),
-                                                   py_trees.decorators.FailureIsRunning(lf.CheckCounter(vehicle, wpn)),
-                                                   py_trees.decorators.FailureIsRunning(py_trees.decorators.Inverter(lf.LatSpeedUnder(vehicle, 0.8))),
-                                                   py_trees.decorators.FailureIsRunning(lf.LatSpeedUnder(vehicle, 0.2)),
-                                                   lf.CheckCounter(vehicle, wpn)])
+    at_wp = py_trees.composites.Sequence(
+        name=(f"Is vehicle at\n waypoint {wpn} ?"),
+        children=[lf.CheckCounterLessThan(vehicle, wpn+1),
+                  py_trees.decorators.FailureIsRunning(
+                      lf.CheckCounter(vehicle, wpn)),
+                  py_trees.decorators.FailureIsRunning(
+                      py_trees.decorators.Inverter(
+                          lf.LatSpeedUnder(vehicle, 0.8))),
+                  py_trees.decorators.FailureIsRunning(
+                      lf.LatSpeedUnder(vehicle, 0.2)),
+                  lf.CheckCounter(vehicle, wpn)])
     at_wp.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
     return at_wp
+
 
 def leg_handler(vehicle, wp1, wp2, preconds=[]):
     """
@@ -194,28 +210,35 @@ def leg_handler(vehicle, wp1, wp2, preconds=[]):
 
     """
     assert wp2 > wp1
-    wait_then_set_ctr = py_trees.composites.Sequence(name='Wait then Set CTR to {}'.format(wp2),
-                                                     children=[py_trees.timers.Timer(duration=2.0),
-                                                               lf.SetCounter(vehicle, wp2)])
+    wait_then_set_ctr = py_trees.composites.Sequence(
+        name=f'Wait then Set CTR to {wp2}',
+        children=[py_trees.timers.Timer(duration=2.0),
+                  lf.SetCounter(vehicle, wp2)])
     wait_then_set_ctr.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
 
     if not preconds:
-        lh = py_trees.composites.Sequence(name='Transition handler {} to {}'.format(wp1, wp2),
-                                          children=[wait_for_wp_hold(vehicle, wp1),
-                                                    wait_then_set_ctr])
+        lh = py_trees.composites.Sequence(
+            name=f'Transition handler {wp1} to {wp2}',
+            children=[wait_for_wp_hold(vehicle, wp1),
+                      wait_then_set_ctr])
     else:
-        precond_priority = py_trees.composites.Selector(name="Preconds for {} to {}".format(wp1, wp2))
+        precond_priority = py_trees.composites.Selector(
+            name=f"Preconds for {wp1} to {wp2}")
         for precond in preconds:
             precond_priority.add_child(py_trees.decorators.Inverter(precond))
         precond_priority.add_child(wait_then_set_ctr)
 
-        lh = py_trees.composites.Sequence(name='Transition handler {} to {}'.format(wp1, wp2),
-                                          children=[wait_for_wp_hold(vehicle, wp1),
-                                                    precond_priority])
-    
-    lh_dec = py_trees.decorators.OneShot(py_trees.decorators.FailureIsRunning(lh))
+        lh = py_trees.composites.Sequence(
+            name=f'Transition handler {wp1} to {wp2}',
+            children=[wait_for_wp_hold(vehicle, wp1),
+                      precond_priority])
+
+    lh_dec = py_trees.decorators.OneShot(
+        py_trees.decorators.FailureIsRunning(lh))
+
     lh.blackbox_level = py_trees.common.BlackBoxLevel.COMPONENT
     return lh_dec
+
 
 def flight_manager(vehicle, preflight, safety, legs):
     """
@@ -229,7 +252,7 @@ def flight_manager(vehicle, preflight, safety, legs):
     vehicle : dronekit.Vehicle
         Provides MAVLINK interface
     preflight : list of py_trees.behaviour.Behaviour
-        The preflight checks, in order.  All must return success before take-off
+        The preflight checks, in order.  All must return success before takeoff
         permitted.  Preflight waits indefinitely if they return otherwise.
     safety : list of py_trees.behaviour.Behaviour
         The safety modules, each produced using the safety_module idiom.
@@ -247,28 +270,32 @@ def flight_manager(vehicle, preflight, safety, legs):
     check_mode_auto = lf.CheckMode(vehicle, 'AUTO')
 
     invtr_plus_mdchk = py_trees.decorators.Inverter(check_mode_auto)
-    
-    safety_parallel = py_trees.composites.Parallel(name="Safety Monitor",
-                                                   children=safety,
-                                                   policy=py_trees.common.ParallelPolicy.SuccessOnAll(synchronise=False))
+
+    safety_parallel = py_trees.composites.Parallel(
+        name="Safety Monitor",
+        children=safety,
+        policy=py_trees.common.ParallelPolicy.SuccessOnAll(synchronise=False))
     invtr_plus_parallel = py_trees.decorators.Inverter(child=safety_parallel)
 
-    leg_manager = py_trees.composites.Parallel(name="Leg Handlers",
-                                               children=legs,
-                                               policy=py_trees.common.ParallelPolicy.SuccessOnSelected(children=[legs[-1]], synchronise=False))
+    leg_manager = py_trees.composites.Parallel(
+        name="Leg Handlers",
+        children=legs,
+        policy=py_trees.common.ParallelPolicy.SuccessOnSelected(
+            children=[legs[-1]], synchronise=False))
 
     mission = py_trees.composites.Selector(name="Mission Manager",
                                            children=[invtr_plus_mdchk,
                                                      invtr_plus_parallel,
                                                      leg_manager])
 
-    pre_flight = py_trees.composites.Sequence(name="Preflight checks",
-                                              children=[py_trees.decorators.FailureIsRunning(b) 
-                                                        for b in preflight])
+    pre_flight = py_trees.composites.Sequence(
+        name="Preflight checks",
+        children=[py_trees.decorators.FailureIsRunning(b) for b in preflight])
 
-    fm_root = py_trees.decorators.OneShot(py_trees.composites.Sequence(name="FLight Manager",
-                                                                       children=[pre_flight,
-                                                                                 wait_for_auto_take_off(vehicle),
-                                                                                 mission,
-                                                                                 wait_for_landing(vehicle)]))
+    fm_root = py_trees.decorators.OneShot(py_trees.composites.Sequence(
+        name="FLight Manager",
+        children=[pre_flight,
+                  wait_for_auto_take_off(vehicle),
+                  mission,
+                  wait_for_landing(vehicle)]))
     return fm_root

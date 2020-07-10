@@ -63,64 +63,61 @@ def dot_tree(
             print("{}".format(py_trees.display.dot_graph(root).to_string()))
     """
     def get_node_attributes(node):
-        blackbox_font_colours = {common.BlackBoxLevel.DETAIL: "white",
-                                 common.BlackBoxLevel.COMPONENT: "lawngreen",
-                                 common.BlackBoxLevel.BIG_PICTURE: "white"
-                                 }
+
         if isinstance(node, composites.Chooser):
-            if node.status==common.Status.SUCCESS:
-                attributes = ('doubleoctagon', 'green', 'white')  # octagon
-            elif node.status==common.Status.FAILURE:
-                attributes = ('doubleoctagon', 'red', 'white')  # octagon
-            elif node.status==common.Status.RUNNING:
-                attributes = ('doubleoctagon', 'blue', 'white')  # octagon
+            if node.status == common.Status.SUCCESS:
+                attributes = ('doubleoctagon', 'green', 'white')
+            elif node.status == common.Status.FAILURE:
+                attributes = ('doubleoctagon', 'red', 'white')
+            elif node.status == common.Status.RUNNING:
+                attributes = ('doubleoctagon', 'blue', 'white')
             else:
-                attributes = ('doubleoctagon', 'gray31', 'white')  # octagon
+                attributes = ('doubleoctagon', 'gray31', 'white')
         elif isinstance(node, composites.Selector):
-            if node.status==common.Status.SUCCESS:
-                attributes = ('octagon', 'green', 'white')  # octagon
-            elif node.status==common.Status.FAILURE:
-                attributes = ('octagon', 'red', 'white')  # octagon
-            elif node.status==common.Status.RUNNING:
-                attributes = ('octagon', 'blue', 'white')  # octagon
+            if node.status == common.Status.SUCCESS:
+                attributes = ('octagon', 'green', 'white')
+            elif node.status == common.Status.FAILURE:
+                attributes = ('octagon', 'red', 'white')
+            elif node.status == common.Status.RUNNING:
+                attributes = ('octagon', 'blue', 'white')
             else:
-                attributes = ('octagon', 'gray31', 'white')  # octagon
+                attributes = ('octagon', 'gray31', 'white')
         elif isinstance(node, composites.Sequence):
-            if node.status==common.Status.SUCCESS:
+            if node.status == common.Status.SUCCESS:
                 attributes = ('record', 'green', 'white') 
-            elif node.status==common.Status.FAILURE:
+            elif node.status == common.Status.FAILURE:
                 attributes = ('record', 'red', 'white')
-            elif node.status==common.Status.RUNNING:
+            elif node.status == common.Status.RUNNING:
                 attributes = ('record', 'blue', 'white')
             else:
                 attributes = ('record', 'gray31', 'white')
         elif isinstance(node, composites.Parallel):
-            if node.status==common.Status.SUCCESS:
+            if node.status == common.Status.SUCCESS:
                 attributes = ('parallelogram', 'green', 'white') 
-            elif node.status==common.Status.FAILURE:
+            elif node.status == common.Status.FAILURE:
                 attributes = ('parallelogram', 'red', 'white')
-            elif node.status==common.Status.RUNNING:
+            elif node.status == common.Status.RUNNING:
                 attributes = ('parallelogram', 'blue', 'white')
             else:
                 attributes = ('parallelogram', 'gray31', 'white')
         elif isinstance(node, decorators.Decorator):
             attributes = ('Mdiamond', 'ghostwhite', 'black')
         else:
-            if node.status==common.Status.SUCCESS:
+            if node.status == common.Status.SUCCESS:
                 attributes = ('ellipse', 'green', 'white') 
-            elif node.status==common.Status.FAILURE:
+            elif node.status == common.Status.FAILURE:
                 attributes = ('ellipse', 'red', 'white')
-            elif node.status==common.Status.RUNNING:
+            elif node.status == common.Status.RUNNING:
                 attributes = ('ellipse', 'blue', 'white')
             else:
                 attributes = ('ellipse', 'gray', 'black')
         try:
             if node.blackbox_level == common.BlackBoxLevel.DETAIL:
-                if node.status==common.Status.SUCCESS:
+                if node.status == common.Status.SUCCESS:
                     attributes = ("ellipse", 'green', 'white')
-                elif node.status==common.Status.FAILURE:
+                elif node.status == common.Status.FAILURE:
                     attributes = ("ellipse", 'red', 'white')
-                elif node.status==common.Status.RUNNING:
+                elif node.status == common.Status.RUNNING:
                     attributes = ("ellipse", 'blue', 'white')
                 else:
                     attributes = ("ellipse", 'gray', 'black')
