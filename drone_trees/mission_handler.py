@@ -134,7 +134,3 @@ class MissionHandler:
 
         """
         return MissionUpload(vehicle, self._wp.wpoints[:])
-
-    # TODO implement the verification in leaf_nodes
-    # def verify_mission(self,vehicle):
-    #     return(MissionVerify(vehicle,self._wp.wpoints))
