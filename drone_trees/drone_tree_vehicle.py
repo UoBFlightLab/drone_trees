@@ -49,8 +49,33 @@ class DistanceSensor():
         """
         String representation used to print the Distance Sensor measurements.
         """
-        return f"DISTANCE_SENSOR: time_boot_ms={self.time_boot_ms},\
-                current_distance={ self.current_distance},id={self.id}"
+        return f"DISTANCE_SENSOR: time_boot_ms={self.time_boot_ms},"\
+            "current_distance={self.current_distance},id={self.id}"
+
+
+class StatusText():
+    """
+    Status text message. These messages are printed in yellow in the COMM
+    console of QGroundControl.
+
+    The message definition is here:
+    https://mavlink.io/en/messages/common.html#STATUSTEXT
+
+    :text:      Status text message, without null termination character
+    :severity: 	Severity of status. Relies on the definitions within RFC-5424.
+    """
+    def __init__(self, text=None, severity=None):
+        """
+        STATUSTEXT object constructor.
+        """
+        self.text = text
+        self.severity = severity
+
+    def __str__(self):
+        """
+        String representation used to print the Status Text.
+        """
+        return f"STATUSTEXT: text={self.text},severity={self.severity}"
 
 
 class DroneTreeVehicle(Vehicle):
@@ -69,6 +94,13 @@ class DroneTreeVehicle(Vehicle):
         # Create an array of distance sensors
         max_distance_sensors = 8
         self._distance_sensors = [DistanceSensor() for ii in range(max_distance_sensors)]
+
+        # Status text message
+        self._statustext = StatusText()
+
+        # Acknowledgment message during waypoint handling
+        # https://mavlink.io/en/messages/common.html#MISSION_ACK
+        self._mission_ack_type = None
 
         # Create a message listener using the decorator.
         @self.on_message('DISTANCE_SENSOR')
@@ -91,6 +123,32 @@ class DroneTreeVehicle(Vehicle):
             self.notify_attribute_listeners('distance_sensors',
                                             self._distance_sensors)
 
+        @self.on_message('STATUSTEXT')
+        def listener(self, name, message):
+            """
+            The listener is called for messages that contain the string
+            specified in the decorator, passing the vehicle, message name, and
+            the message.
+            """
+            self._statustext.text = message.text
+            self._statustext.severity = message.severity
+
+            # Notify all observers of new message (with new value)
+            self.notify_attribute_listeners('statustext', self._statustext)
+
+        @self.on_message('MISSION_ACK')
+        def listener(self, name, message):
+            """
+            The listener is called for messages that contain the string
+            specified in the decorator, passing the vehicle, message name, and
+            the message.
+            """
+            self._mission_ack_type = message.type
+
+            # Notify all observers of new message (with new value)
+            self.notify_attribute_listeners('mission_ack_type',
+                                            self._mission_ack_type)
+
     @property
     def distance_sensors(self):
         """
@@ -103,3 +161,29 @@ class DroneTreeVehicle(Vehicle):
 
         """
         return self._distance_sensors
+
+    @property
+    def statustext(self):
+        """
+        Access the status text of the drone
+
+        Returns
+        -------
+        status text object
+
+        """
+        return self._statustext
+
+    @property
+    def mission_ack_type(self):
+        """
+        Access Mission Acknowledgment type during mission handling
+        type number defined in the link below:
+        https://mavlink.io/en/messages/common.html#MAV_MISSION_RESULT
+
+        Returns
+        -------
+        int describing the mission ack according to the link above
+
+        """
+        return self._mission_ack_type
