@@ -418,7 +418,7 @@ def test_TriggerCamera(copter_sitl_ground):
     # Make a local vehicle instance
     vehicle = connect(copter_sitl_ground.connection_string(), wait_ready=True)
 
-    #"""-----  Expect SUCCESS -----"""
+    """-----  Expect SUCCESS -----"""
 
     ekf_check_healthy = lf.TriggerCamera(vehicle)              # trigger camera
     ekf_check_healthy.tick_once()                # tick behaviour to get status
@@ -427,10 +427,11 @@ def test_TriggerCamera(copter_sitl_ground):
     def listener(self, name, msg):
         # Check single image captured
         assert msg.img_idx == 1
-    
+
     assert ekf_check_healthy.status == Status.SUCCESS
 
     vehicle.close()                              # close local vehicle instance
+
 
 def test_SetParam(copter_sitl_ground):
     """Verify that the SetParam behaviour changes parameter value and responds
@@ -537,10 +538,12 @@ def test_MoveDrone(copter_sitl_guided_to):
 
 
 def test_MissionUpload(copter_sitl_ground):
-    """Verify that a mission has been uploaded to the vehicle"""
+    """Verify MissionUpload and MissionVerify leaf node behaviours"""
 
     # Make a local vehicle instance
-    vehicle = connect(copter_sitl_ground.connection_string(), wait_ready=True)
+    vehicle = connect(copter_sitl_ground.connection_string(),
+                      wait_ready=True,
+                      vehicle_class=DroneTreeVehicle)
 
     # load an arbitrary mission mission file
     from pymavlink.mavwp import MAVWPLoader
@@ -554,6 +557,27 @@ def test_MissionUpload(copter_sitl_ground):
     cmds = vehicle.commands
     cmds.clear()
     wplist = mission.wpoints[:]
+
+    """-----  Expect FAILURE -----"""
+
+    while not vehicle.is_armable:                # wait until armable
+        sleep(0.5)
+    vehicle.parameters['SIM_SPEEDUP'] = 5        # slow down SITL
+    vehicle.armed = True                         # arm vehicle
+    sleep(0.5)
+
+    # Upload mission when armed
+    mission_upload_armed = lf.MissionUpload(vehicle, wplist)
+    mission_upload_armed.tick_once()             # tick behaviour to get status
+    # check response
+    assert mission_upload_armed.status == Status.FAILURE
+    # check no mission on-board
+    assert vehicle.commands.count < 2
+
+    # Check mission verify fails when no waypoints
+    mission_verify_clear = lf.MissionVerify(vehicle)
+    mission_verify_clear.tick_once()             # tick behaviour to get status
+    assert mission_verify_clear.status == Status.FAILURE       # check response
 
     """-----  Expect SUCCESS -----"""
 
@@ -569,23 +593,11 @@ def test_MissionUpload(copter_sitl_ground):
     # check response
     assert mission_upload_disarmed.status == Status.SUCCESS
     # check number of waypoints on-board against the mission file
-    assert cmds.count == len(wplist)
+    assert cmds.count-1 == len(wplist)
 
-    """-----  Expect FAILURE -----"""
-
-    cmds.clear()                                 # clear mission
-    while not vehicle.is_armable:                # wait until armable
-        sleep(0.5)
-    vehicle.parameters['SIM_SPEEDUP'] = 5        # slow down SITL
-    vehicle.armed = True                         # arm vehicle
-    sleep(0.5)
-
-    # Upload mission when armed
-    mission_upload_armed = lf.MissionUpload(vehicle, wplist)
-    mission_upload_armed.tick_once()             # tick behaviour to get status
-    # check response
-    assert mission_upload_armed.status == Status.FAILURE
-    # check no mission on-board
-    assert vehicle.commands.count < 2
+    # Check mission verify succeeds after receiving waypoints and MISSION_ACK
+    mission_verify_uploaded = lf.MissionVerify(vehicle)
+    mission_verify_uploaded.tick_once()          # tick behaviour to get status
+    assert mission_verify_uploaded.status == Status.SUCCESS    # check response
 
     vehicle.close()                              # close local vehicle instance

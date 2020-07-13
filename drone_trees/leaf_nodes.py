@@ -66,29 +66,49 @@ class MissionUpload(py_trees.behaviour.Behaviour):
             self.feedback_message = 'Uploaded {} WPs'.format(cmds.count)
             return py_trees.common.Status.SUCCESS
 
-# class MissionVerify(py_trees.behaviour.Behaviour):
 
-#     def __init__(self, vehicle, wplist):
-#         super(MissionVerify, self).__init__('Mission Verify')
-#         self._vehicle = vehicle
-#         self._wplist = wplist[:]
+class MissionVerify(py_trees.behaviour.Behaviour):
+    """
+    Leaf node for verifying mission upload by checking the Mission
+    Acknowledmnet message (link below) and having a non-zero waypoint.
+        FAILURE: No mission detected onboard
+        RUNNING: Mission detected but no acknowledment
+        SUCCESS: Mission detected and acknowledged
 
-#     def initialise(self):
-#         self._vehicle.commands.clear()
-#         self._vehicle.commands.download()
+    https://mavlink.io/en/messages/common.html#MISSION_ACK
+    https://mavlink.io/en/messages/common.html#MAV_MISSION_RESULT
 
-#     def update(self):
-#         if self._vehicle.commands.count < len(self._wplist):
-#             self.feedback_message = ('Got {} of {} WPs'
-#                                      .format(self._vehicle.commands.count,
-#                                              len(self._wplist)))
-#             return py_trees.common.Status.RUNNING
-#         else:
-#             cmd_list = [cmd for cmd in self._vehicle.commands]
-#             if cmd_list[1:]==self._wplist[:]:
-#                 return py_trees.common.Status.SUCCESS
-#             else:
-#                 return py_trees.common.Status.FAILURE
+    Parameters
+    ----------
+    vehicle : dronekit.Vehicle
+        The MAVLINK interface
+
+    Returns
+    -------
+    node : py_trees.common.Status
+        Status of the leaf node behaviour
+
+    """
+    def __init__(self, vehicle):
+        super(MissionVerify, self).__init__('Mission Verify')
+        self._vehicle = vehicle
+
+    def initialise(self):
+        self._vehicle.commands.download()
+
+    def update(self):
+        if self._vehicle.commands.count < 1:
+            self.feedback_message = 'No mission detected'
+            return py_trees.common.Status.FAILURE
+        else:
+            if self._vehicle.mission_ack_type is None:
+                self.feedback_message = 'Mission acknowledgement not received'
+                return py_trees.common.Status.RUNNING
+            # mission_ack_type of 0 means mission accepted
+            # https://mavlink.io/en/messages/common.html#MAV_MISSION_ACCEPTED
+            elif self._vehicle.mission_ack_type == 0:
+                self.feedback_message = 'MAV misssion accepted'
+                return py_trees.common.Status.SUCCESS
 
 
 class SetParam(py_trees.behaviour.Behaviour):
