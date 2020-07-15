@@ -319,8 +319,8 @@ def test_LatSpeedUnder(copter_sitl_guided_to):
 
 
 def test_CheckCounter(copter_sitl_auto_to):
-    """Verify CheckCounter and CheckCounterLessThan behaviours respond as
-    follows:
+    """Verify CheckCounter, CheckCounterLessThan and WaitForWaypoint behaviours
+    respond as follows:
     CheckCounter
         FAILURE: WP index does not match the entry
         SUCCESS: WP index matches the entry
@@ -328,18 +328,32 @@ def test_CheckCounter(copter_sitl_auto_to):
     CheckCounterLessThan
         FAILURE: WP index is greater than equal to the entry
         SUCCESS: WP index is less than the entry
+
+    WaitForWaypoint
+        RUNNING: WP index matches the entry, the drone is flying towards WP
+        SUCCESS: WP reached matches the entry, the drone is at the specified WP
+        FAILURE: Otherwise
     """
 
     # Make a local vehicle instance
-    vehicle = connect(copter_sitl_auto_to.connection_string(), wait_ready=True)
+    vehicle = connect(copter_sitl_auto_to.connection_string(),
+                      vehicle_class=DroneTreeVehicle,
+                      wait_ready=True)
+
+    vehicle.commands.next = 4  # set next waypoint counter to 4
+    sleep(0.5)
+
+    """-----  Expect RUNNING -----"""
+
+    # Waypoint counter equals to entry (Drone flying towards WP)
+    wfw_equal = lf.WaitForWaypoint(vehicle, 4)                 # check ctr is 4
+    wfw_equal.tick_once()                        # tick behaviour to get status
+    assert wfw_equal.status == Status.RUNNING
 
     """-----  Expect SUCCESS -----"""
 
-    vehicle.commands.next = 3  # set next waypoint counter to 3
-    sleep(0.5)
-
     # Waypoint counter equals to entry
-    ctr_equal = lf.CheckCounter(vehicle, 3)      # check waypoint counter is 3
+    ctr_equal = lf.CheckCounter(vehicle, 4)      # check waypoint counter is 4
     ctr_equal.tick_once()                        # tick behaviour to get status
     assert ctr_equal.status == Status.SUCCESS
 
@@ -347,6 +361,15 @@ def test_CheckCounter(copter_sitl_auto_to):
     ctr_lt_below = lf.CheckCounterLessThan(vehicle, 5)      # check ctr below 5
     ctr_lt_below.tick_once()                     # tick behaviour to get status
     assert ctr_lt_below.status == Status.SUCCESS
+
+    # Wait to reach waypoint 4
+    while not vehicle.mission_item_reached == 4:
+        sleep(0.5)
+
+    # Drone reached desired waypoint
+    wfw_reached = lf.WaitForWaypoint(vehicle, 4)       # check ctr reached WP 4
+    wfw_reached.tick_once()                      # tick behaviour to get status
+    assert wfw_reached.status == Status.SUCCESS
 
     """-----  Expect FAILURE -----"""
 
@@ -369,6 +392,11 @@ def test_CheckCounter(copter_sitl_auto_to):
     ctr_lt_equal = lf.CheckCounterLessThan(vehicle, 3)      # check ctr below 3
     ctr_lt_equal.tick_once()                     # tick behaviour to get status
     assert ctr_lt_equal.status == Status.FAILURE
+
+    # Waypoint counter does nont equals to entry
+    wfw_not_equal = lf.WaitForWaypoint(vehicle, 9)     # check ctr reached WP 9
+    wfw_not_equal.tick_once()                    # tick behaviour to get status
+    assert wfw_not_equal.status == Status.FAILURE
 
     vehicle.close()                              # close local vehicle instance
 

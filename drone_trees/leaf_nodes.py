@@ -63,7 +63,7 @@ class MissionUpload(py_trees.behaviour.Behaviour):
             for wp in self._wplist:
                 cmds.add(wp)
             cmds.upload()
-            self.feedback_message = 'Uploaded {} WPs'.format(cmds.count)
+            self.feedback_message = f'Uploaded {cmds.count} WPs'
             return py_trees.common.Status.SUCCESS
 
 
@@ -204,7 +204,7 @@ class CheckGPS(py_trees.behaviour.Behaviour):
     """
 
     def __init__(self, vehicle, fixType):
-        super(CheckGPS, self).__init__("GPS Status Check > %i?" % fixType)
+        super(CheckGPS, self).__init__(f"GPS Status Check > {fixType} ?")
         self._vehicle = vehicle
         self._fixType = fixType
 
@@ -282,7 +282,7 @@ class CheckEKF(py_trees.behaviour.Behaviour):
 
     """
     def __init__(self, vehicle):
-        super(CheckEKF, self).__init__("EKF healthy?")
+        super(CheckEKF, self).__init__("EKF healthy ?")
         self._vehicle = vehicle
 
     def update(self):
@@ -315,7 +315,7 @@ class CheckCounter(py_trees.behaviour.Behaviour):
 
     """
     def __init__(self, vehicle, wpn):
-        super(CheckCounter, self).__init__("Is Counter {}?".format(wpn))
+        super(CheckCounter, self).__init__(f"Is Counter {wpn}?")
         self._vehicle = vehicle
         self._wpn = wpn
 
@@ -325,7 +325,7 @@ class CheckCounter(py_trees.behaviour.Behaviour):
             self.feedback_message = 'Yes'
             return py_trees.common.Status.SUCCESS
         else:
-            self.feedback_message = 'No, it''s {}'.format(next_wp)
+            self.feedback_message = f"No, it's {next_wp}"
             return py_trees.common.Status.FAILURE
 
 
@@ -350,17 +350,57 @@ class CheckCounterLessThan(py_trees.behaviour.Behaviour):
 
     """
     def __init__(self, vehicle, wpn):
-        super(CheckCounterLessThan, self).__init__("Check Counter < %i" % wpn)
+        super(CheckCounterLessThan, self).__init__(f"Check Counter < {wpn}")
         self._vehicle = vehicle
         self._wpn = wpn
 
     def update(self):
         next_wp = self._vehicle.commands.next
         if next_wp < self._wpn:
-            self.feedback_message = 'Yes, it''s {}.'.format(next_wp)
+            self.feedback_message = f"Yes, it's {next_wp}."
             return py_trees.common.Status.SUCCESS
         else:
-            self.feedback_message = 'No, it''s {}.'.format(next_wp)
+            self.feedback_message = f"No, it's {next_wp}."
+            return py_trees.common.Status.FAILURE
+
+
+class WaitForWaypoint(py_trees.behaviour.Behaviour):
+    """
+    Condition leaf node to wait for arrival at specified waypoint:
+        RUNNING: WP index matches the entry, the drone is flying towards WP
+        SUCCESS: WP reached matches the entry, the drone is at the specified WP
+        FAILURE: Otherwise
+
+    Parameters
+    ----------
+    vehicle : dronekit.Vehicle
+        The MAVLINK interface
+
+    wpn : int
+        The index of the waypoint in question.
+
+    Returns
+    -------
+    node : py_trees.common.Status
+        Status of the leaf node behaviour
+
+    """
+    def __init__(self, vehicle, wpn):
+        super(WaitForWaypoint, self).__init__("Is vehicle at\n"
+                                              f"waypoint {wpn} ?")
+        self._vehicle = vehicle
+        self._wpn = wpn
+
+    def update(self):
+        next_wp = self._vehicle.commands.next
+        if self._wpn == next_wp:
+            self.feedback_message = 'Flying towards it'
+            return py_trees.common.Status.RUNNING
+        elif self._vehicle.mission_item_reached == self._wpn:
+            self.feedback_message = f'Yes, reached waypoint {self._wpn}'
+            return py_trees.common.Status.SUCCESS
+        else:
+            self.feedback_message = f"No, it's {next_wp}"
             return py_trees.common.Status.FAILURE
 
 
@@ -530,7 +570,7 @@ class IsArmable(py_trees.behaviour.Behaviour):
 
     """
     def __init__(self, vehicle):
-        super(IsArmable, self).__init__('Can drone be armed?')
+        super(IsArmable, self).__init__('Can drone be armed ?')
         self._vehicle = vehicle
 
     def update(self):
@@ -560,7 +600,7 @@ class IsArmed(py_trees.behaviour.Behaviour):
 
     """
     def __init__(self, vehicle):
-        super(IsArmed, self).__init__('Is drone armed?')
+        super(IsArmed, self).__init__('Is drone armed ?')
         self._vehicle = vehicle
 
     def update(self):
@@ -608,13 +648,13 @@ class SimpleTakeoff(py_trees.behaviour.Behaviour):
 
     """
     def __init__(self, vehicle, altitude):
-        super(SimpleTakeoff, self).__init__("Take off %i" % altitude)
+        super(SimpleTakeoff, self).__init__(f'Take off {altitude}')
         self._vehicle = vehicle
         self._altitude = altitude
 
     def update(self):
         self._vehicle.simple_takeoff(self._altitude)
-        self.feedback_message = 'Takeoff and hold {}'.format(self._altitude)
+        self.feedback_message = f'Takeoff and hold {self._altitude}'
         return py_trees.common.Status.SUCCESS
 
 
@@ -661,7 +701,7 @@ class AltGlobalAbove(py_trees.behaviour.Behaviour):
 
     """
     def __init__(self, vehicle, altitude):
-        super(AltGlobalAbove, self).__init__("Over %f (global)" % altitude)
+        super(AltGlobalAbove, self).__init__(f'Over {altitude} (global)')
         self._vehicle = vehicle
         self._altitude = altitude
 
@@ -695,7 +735,7 @@ class AltLocalAbove(py_trees.behaviour.Behaviour):
 
     """
     def __init__(self, vehicle, altitude):
-        super(AltLocalAbove, self).__init__("Over %f (local)" % altitude)
+        super(AltLocalAbove, self).__init__(f'Over {altitude} (local)')
         self._vehicle = vehicle
         self._altitude = altitude
 
@@ -834,8 +874,7 @@ class LatSpeedUnder(py_trees.behaviour.Behaviour):
 
     """
     def __init__(self, vehicle, max_speed):
-        super(LatSpeedUnder, self).__init__(
-            "Lat speed < {}?".format(max_speed))
+        super(LatSpeedUnder, self).__init__(f"Lat speed < {max_speed}?")
         self._vehicle = vehicle
         self._max_speed = max_speed
 
@@ -843,8 +882,8 @@ class LatSpeedUnder(py_trees.behaviour.Behaviour):
         (vx, vy, vz) = self._vehicle.velocity
         current_speed = math.sqrt(vx*vx + vy*vy)
         if current_speed < self._max_speed:
-            self.feedback_message = 'Yes, speed is {}'.format(current_speed)
+            self.feedback_message = f'Yes, speed is {current_speed}'
             return py_trees.common.Status.SUCCESS
         else:
-            self.feedback_message = 'No, speed is {}'.format(current_speed)
+            self.feedback_message = f'No, speed is {current_speed}'
             return py_trees.common.Status.FAILURE

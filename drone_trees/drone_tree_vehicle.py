@@ -49,8 +49,8 @@ class DistanceSensor():
         """
         String representation used to print the Distance Sensor measurements.
         """
-        return f"DISTANCE_SENSOR: time_boot_ms={self.time_boot_ms},"\
-            "current_distance={self.current_distance},id={self.id}"
+        return (f"DISTANCE_SENSOR: time_boot_ms={self.time_boot_ms},"
+                f"current_distance={self.current_distance},id={self.id}")
 
 
 class StatusText():
@@ -102,6 +102,9 @@ class DroneTreeVehicle(Vehicle):
         # https://mavlink.io/en/messages/common.html#MISSION_ACK
         self._mission_ack_type = None
 
+        # Updates when a mission item is completed
+        self._mission_item_reached = None
+
         # Create a message listener using the decorator.
         @self.on_message('DISTANCE_SENSOR')
         def listener(self, name, message):
@@ -149,6 +152,19 @@ class DroneTreeVehicle(Vehicle):
             self.notify_attribute_listeners('mission_ack_type',
                                             self._mission_ack_type)
 
+        @self.on_message('MISSION_ITEM_REACHED')
+        def listener(self, name, message):
+            """
+            The listener is called for messages that contain the string
+            specified in the decorator, passing the vehicle, message name, and
+            the message.
+            """
+            self._mission_item_reached = message.seq
+
+            # Notify all observers of new message (with new value)
+            self.notify_attribute_listeners('mission_item_reached',
+                                            self._mission_item_reached)
+
     @property
     def distance_sensors(self):
         """
@@ -187,3 +203,20 @@ class DroneTreeVehicle(Vehicle):
 
         """
         return self._mission_ack_type
+
+    @property
+    def mission_item_reached(self):
+        """
+        Access the sequence number of the last reached mission item. In an AUTO
+        mission this number represents the index of the reached waypoint
+        command and it updates when a mission command item is completed
+
+        The message definition is here:
+        https://mavlink.io/en/messages/common.html#MISSION_ITEM_REACHED
+
+        Returns
+        -------
+        int sequence number of the last reached mission item
+
+        """
+        return self._mission_item_reached
