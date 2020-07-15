@@ -137,7 +137,7 @@ def wait_for_landing(vehicle):
 
 def wait_for_wp_hold(vehicle, wpn):
     """
-    Behaviour to wait for arrival at specified waypoint:
+    Behaviour to wait for arrival at specified waypoint and hold steady:
         FAILURE: missed waypoint, as WP index already higher on entry
         RUNNING: waypoint index at or below required but still on the way
         SUCCESS: holding steady at the desired waypoint (measured by low
@@ -161,14 +161,9 @@ def wait_for_wp_hold(vehicle, wpn):
     at_wp = py_trees.composites.Sequence(
         name=(f"Is vehicle at\n waypoint {wpn} ?"),
         children=[lf.CheckCounterLessThan(vehicle, wpn+1),
+                  lf.WaitForWaypoint(vehicle, wpn),
                   py_trees.decorators.FailureIsRunning(
-                      lf.CheckCounter(vehicle, wpn)),
-                  py_trees.decorators.FailureIsRunning(
-                      py_trees.decorators.Inverter(
-                          lf.LatSpeedUnder(vehicle, 0.8))),
-                  py_trees.decorators.FailureIsRunning(
-                      lf.LatSpeedUnder(vehicle, 0.2)),
-                  lf.CheckCounter(vehicle, wpn)])
+                      lf.LatSpeedUnder(vehicle, 0.2))])
     at_wp.blackbox_level = py_trees.common.BlackBoxLevel.DETAIL
     return at_wp
 

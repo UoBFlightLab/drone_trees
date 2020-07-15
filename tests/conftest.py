@@ -198,7 +198,9 @@ def copter_sitl_auto_to():
     sitl.block_until_ready()
 
     # Connect again
-    veh = connect(sitl.connection_string(), vehicle_class=DroneTreeVehicle)
+    veh = connect(sitl.connection_string(),
+                  wait_ready=True,
+                  vehicle_class=DroneTreeVehicle)
 
     # upload an arbitrary mission
     mission = MAVWPLoader()
@@ -229,6 +231,9 @@ def copter_sitl_auto_to():
     # Perform an auto take-off
     veh.mode = VehicleMode('AUTO')       # change mode to auto
     veh.channels.overrides['3'] = 1700   # raise throttle to confirm T/O
+    # wait for take-off
+    while veh.location.global_relative_frame.alt < 0.5:
+        sleep(0.5)
     veh.close()              # close vehicle instance after auto takeoff
 
     yield sitl
