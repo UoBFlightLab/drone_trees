@@ -35,7 +35,7 @@ def test_CheckGPS(copter_sitl_ground):
     vehicle = connect(copter_sitl_ground.connection_string(), wait_ready=True)
     # Set GPS status to 3D Fix (status = 3)
     vehicle.parameters['SIM_GPS_TYPE'] = 2
-    sleep(0.5)                        # wait for parameter change to take place
+    sleep(1)                          # wait for parameter change to take place
 
     """-----  Expect SUCCESS -----"""
 
@@ -172,6 +172,38 @@ def test_IsArmable_IsArmed(copter_sitl_ground):
     is_armed_true = lf.IsArmed(vehicle)          # check if vehicle is armed
     is_armed_true.tick_once()                    # tick behaviour to get status
     assert is_armed_true.status == Status.SUCCESS
+
+    vehicle.close()                              # close local vehicle instance
+
+
+def test_CheckRCSwitch(copter_sitl_ground):
+    """Verify that CheckRCSwitch behaviour responds SUCCESS for channel value
+    above the ON limit and FAILURE otherwise"""
+
+    # Make a local vehicle instance
+    vehicle = connect(copter_sitl_ground.connection_string(),
+                      wait_ready=True,
+                      vehicle_class=DroneTreeVehicle)
+
+    switch_channel = 1  # alocated switch channel
+
+    """-----  Expect FAILURE -----"""
+
+    # PWM value below the limit
+    # set ON limit to above current channel reading
+    on_limit_above = vehicle.rc_channels.chan_raw[switch_channel] + 10
+    switch_off = lf.CheckRCSwitch(vehicle, switch_channel, on_limit_above)
+    switch_off.tick_once()                       # tick behaviour to get status
+    assert switch_off.status == Status.FAILURE
+
+    """-----  Expect SUCCESS -----"""
+
+    # PWM value above the limit
+    # set ON limit to below current channel reading
+    on_limit_below = vehicle.rc_channels.chan_raw[switch_channel] - 10
+    switch_on = lf.CheckRCSwitch(vehicle, switch_channel, on_limit_below)
+    switch_on.tick_once()                        # tick behaviour to get status
+    assert switch_on.status == Status.SUCCESS
 
     vehicle.close()                              # close local vehicle instance
 

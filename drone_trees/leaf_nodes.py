@@ -887,3 +887,40 @@ class LatSpeedUnder(py_trees.behaviour.Behaviour):
         else:
             self.feedback_message = f'No, speed is {current_speed}'
             return py_trees.common.Status.FAILURE
+
+
+class CheckRCSwitch(py_trees.behaviour.Behaviour):
+    """
+    Condition leaf node that checks the status of a momentary switch
+    (i.e. push switch)
+        SUCCESS: The switch is on (activated or pushed)
+        FAILURE: The switch is off or no data available
+
+    Parameters
+    ----------
+    vehicle : dronekit.Vehicle
+        The MAVLINK interface
+
+    channel : The channel allocated to the switch
+
+    on_pwm_limit : The PWM limit in which the switch is considered ON in µs
+
+    Returns
+    -------
+    node : py_trees.common.Status
+        Status of the leaf node behaviour
+
+    """
+    def __init__(self, vehicle, channel, on_pwm_limit):
+        super(CheckRCSwitch, self).__init__("Is Switch ON ?")
+        self._vehicle = vehicle
+        self._channel = channel
+        self._on = on_pwm_limit
+
+    def update(self):
+        if self._vehicle.rc_channels.chan_raw[self._channel] > self._on:
+            self.feedback_message = "Yes, it's ON ___"
+            return py_trees.common.Status.SUCCESS
+        else:
+            self.feedback_message = "No, it's OFF _/ _"
+            return py_trees.common.Status.FAILURE

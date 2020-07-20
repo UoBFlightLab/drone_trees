@@ -78,6 +78,37 @@ class StatusText():
         return f"STATUSTEXT: text={self.text},severity={self.severity}"
 
 
+class RCChannels():
+    """
+    RC input channels
+
+    The message definition is here:
+    https://mavlink.io/en/messages/common.html#RC_CHANNELS
+
+    :time_boot_ms:  Timestamp (time since system boot).
+    :chancount:     Total number of RC channels being received. This can be
+                    larger than 18, indicating that more channels are available
+                    but not given in this message. This value should be 0 when
+                    no RC channels are available.
+    : chan_raw:     A dictionary containing values of RC channels 1 to 18
+    """
+    def __init__(self, time_boot_ms=None, chancount=None,
+                 chan_raw=dict.fromkeys(range(1, 18, 1))):
+        """
+        RC_CHANNELS object constructor.
+        """
+        self.time_boot_ms = time_boot_ms
+        self.chancount = chancount
+        self.chan_raw = chan_raw
+
+    def __str__(self):
+        """
+        String representation used to print the RC input.
+        """
+        return (f"RC_CHANNELS : time_boot_ms={self.time_boot_ms}"
+                f",chancount={self.chancount}\n{self.chan_raw}")
+
+
 class DroneTreeVehicle(Vehicle):
     """
     Custom vehicle subclass created for the drone_trees project.
@@ -94,6 +125,9 @@ class DroneTreeVehicle(Vehicle):
         # Create an array of distance sensors
         max_distance_sensors = 8
         self._distance_sensors = [DistanceSensor() for ii in range(max_distance_sensors)]
+
+        # RC inputs
+        self._rcin = RCChannels()
 
         # Status text message
         self._statustext = StatusText()
@@ -165,6 +199,38 @@ class DroneTreeVehicle(Vehicle):
             self.notify_attribute_listeners('mission_item_reached',
                                             self._mission_item_reached)
 
+        @self.on_message('RC_CHANNELS')
+        def listener(self, name, m):
+            """
+            The listener is called for messages that contain the string
+            specified in the decorator, passing the vehicle, message name, and
+            the message.
+            """
+            self._rcin.time_boot_ms = m.time_boot_ms
+            self._rcin.chancount = m.chancount
+            self._rcin.chan_raw = {
+                1: m.chan1_raw,
+                2: m.chan2_raw,
+                3: m.chan3_raw,
+                4: m.chan4_raw,
+                5: m.chan5_raw,
+                6: m.chan6_raw,
+                7: m.chan7_raw,
+                8: m.chan8_raw,
+                9: m.chan9_raw,
+                10: m.chan10_raw,
+                11: m.chan11_raw,
+                12: m.chan12_raw,
+                13: m.chan13_raw,
+                14: m.chan14_raw,
+                15: m.chan15_raw,
+                16: m.chan16_raw,
+                17: m.chan17_raw,
+                18: m.chan18_raw
+            }
+            # Notify all observers of new message (with new value)
+            self.notify_attribute_listeners('rcin', self._rcin)
+
     @property
     def distance_sensors(self):
         """
@@ -177,6 +243,18 @@ class DroneTreeVehicle(Vehicle):
 
         """
         return self._distance_sensors
+
+    @property
+    def rc_channels(self):
+        """
+        Access the rc input channels
+
+        Returns
+        -------
+        RCChannels object
+
+        """
+        return self._rcin
 
     @property
     def statustext(self):
