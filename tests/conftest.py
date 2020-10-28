@@ -26,17 +26,24 @@ Ardupilot SITL instances in the following states:
 import pytest
 import os
 import sys
+import platform
 from time import sleep
 from dronekit_sitl import SITL
 from dronekit import connect, VehicleMode
 from pymavlink.mavwp import MAVWPLoader
 from drone_trees.drone_tree_vehicle import DroneTreeVehicle
 
-
 # Find SITL directory
 test_path = os.path.abspath(sys.path[0])
-sitl_path = os.path.join(test_path, '..', 'examples', 'bridge')
-sitl_filename = os.path.join(sitl_path, 'sitl', 'ArduCopter.exe')
+sitl_path = os.path.join(test_path, '..', 'examples', 'bridge', 'sitl')
+#sitl_filename = os.path.join(sitl_path, 'sitl', 'ArduCopter.exe')
+if platform.system()=='Linux':
+    sitl_filename = os.path.join(sitl_path, 'linux', 'arducopter')
+elif platform.system()=='Windows':
+    sitl_filename = os.path.join(sitl_path, 'windows', 'ArduCopter.exe')
+else:
+    print('No executable suitable for testing on platform {}'.format(platform.system()))
+    sys.exit(1)
 
 
 @pytest.fixture
