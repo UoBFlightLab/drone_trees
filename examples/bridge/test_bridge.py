@@ -64,11 +64,6 @@ def test_sitl():
     sitl = start_sitl()
     veh = connect(sitl.connection_string(), vehicle_class=DroneTreeVehicle)
 
-    # just show every message!
-    # def cb(ob,nm,mg):
-    #     print(mg)
-    # veh.add_message_listener('*', cb)
-
     for ii in range(20):
         sleep(1)
         print(ii)
@@ -117,13 +112,13 @@ def test_nominal(copter4=True):
     ca.vehicle.channels.overrides['3'] = 1700
     # log as we visit each waypoint
     wp_log = {2: False,
-              3: False,
-              5: False,
+              4: False,
               7: False,
-              9: False,
-              11: False,
-              12: False,
-              13: False}
+              10: False,
+              13: False,
+              16: False,
+              18: False,
+              20: False}
     for ii in range(200):
         ca.tick()
         if ca.vehicle.commands.next in wp_log.keys():
@@ -186,13 +181,13 @@ def test_lowbat(copter4=True):
     ca.vehicle.channels.overrides['3'] = 1700
     # log as we visit each waypoint
     wp_log = {2: False,
-              3: False,
-              5: False,
+              4: False,
               7: False,
-              9: False,
-              11: False,
-              12: False,
-              13: False}
+              10: False,
+              13: False,
+              16: False,
+              18: False,
+              20: False}
     while not ca.finished():
         ca.tick()
         if ca.vehicle.commands.next in wp_log.keys():
@@ -203,12 +198,12 @@ def test_lowbat(copter4=True):
 
         print(wp_log)
         sleep(1)
-    # should skip waypoints 7 and 9
-    assert not wp_log[9], 'Mission was not skipped'
+    # should skip waypoints 10 and 13
+    assert not wp_log[13], 'Mission was not skipped'
     # should visit SAFTI
-    assert wp_log[11], 'SAFTI was not visited'
+    assert wp_log[16], 'SAFTI was not visited'
     # should visit final waypoint
-    assert wp_log[13], 'Mission was not completed'
+    assert wp_log[20], 'Mission was not completed'
     # should be back on the ground at HOME
     assert ca.vehicle.location.global_relative_frame.alt < 0.3
     # close down ControlAutomaton
@@ -254,43 +249,43 @@ def test_avoidance():
     ca.vehicle.channels.overrides['3'] = 1700
     # log as we visit each waypoint
     wp_log = {2: False,
-              3: False,
-              5: False,
+              4: False,
               7: False,
-              9: False,
-              11: False,
-              12: False,
-              13: False}
+              10: False,
+              13: False,
+              16: False,
+              18: False,
+              20: False}
     for ii in range(200):
         ca.tick()
         if ca.vehicle.commands.next in wp_log.keys():
             wp_log[ca.vehicle.commands.next] = True
         # Simulate distance sensor reading
-        # 20m at WP 5
-        if ca.vehicle.commands.next == 5:
+        # 20m at WP 7
+        if ca.vehicle.commands.next == 7:
             ca.vehicle.parameters['RNGFND2_SCALING'] = 4
 
         # 1m injected at TENNA to trigger global collision avoidance check
-        if ca.vehicle.commands.next == 7:
+        if ca.vehicle.commands.next == 10:
             ca.vehicle.parameters['RNGFND2_SCALING'] = 0.2
 
-        # 5m at WP 9
-        if ca.vehicle.commands.next == 9:
+        # 5m at WP 13
+        if ca.vehicle.commands.next == 13:
             ca.vehicle.parameters['RNGFND2_SCALING'] = 1
 
         # 50m for the remainder of the mission
-        if ca.vehicle.commands.next > 9:
+        if ca.vehicle.commands.next > 13:
             ca.vehicle.parameters['RNGFND2_SCALING'] = 10
         print(wp_log)
         if ca.finished():
             break
         sleep(1)
-    # should skip waypoints 7 and 9
-    assert not wp_log[9], 'Mission was not skipped'
+    # should skip waypoints 10 and 13
+    assert not wp_log[13], 'Mission was not skipped'
     # should visit SAFTI
-    assert wp_log[11], 'SAFTI was not visited'
+    assert wp_log[16], 'SAFTI was not visited'
     # should visit final waypoint
-    assert wp_log[13], 'Mission was not completed'
+    assert wp_log[20], 'Mission was not completed'
     # should be back on the ground at HOME
     assert ca.vehicle.location.global_relative_frame.alt < 0.3
     # close down ControlAutomaton

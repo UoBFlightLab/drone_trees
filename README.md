@@ -23,7 +23,7 @@ This example uses a hand-crafted behaviour tree to control a drone in GUIDED mod
 
 To simulate the whole thing automatically, run the `test_square.py` script.  To see more, connect your favourite ground station software to the extra port on the SITL, usually `tcp:127.0.0.1:5762` but check the output as the port number increments by ten each run.
 
-If you'd rather manage the sim yourself or even fly the thing (!), run `python fly_square.py <conn>` where `<conn>` is the connection to the mavlink stream.  For example, if you run a SITL through Mission Planner, hit Ctrl+F, then the Mavlink button, and enable 'TCP host' with write access.  Then, if you agreed to the defaults, run `python fly_sqare.py tcp:127.0.0.1:14550`.  You'll need to put the drone in 'GUIDED' and arm it through the ground station as the behaviour tree will never arm or change mode.
+If you'd rather manage the sim yourself or even fly the thing (!), run `python fly_square.py <conn>` where `<conn>` is the connection to the mavlink stream.  For example, if you run a SITL through Mission Planner, hit Ctrl+F, then the Mavlink button, and enable 'TCP host' with write access.  Then, if you agreed to the defaults, run `python fly_square.py tcp:127.0.0.1:14550`.  You'll need to put the drone in 'GUIDED' and arm it through the ground station as the behaviour tree will never arm or change mode.
 
 ![Behaviour tree](https://raw.githubusercontent.com/UoBFlightLab/drone_trees/master/examples/square/fly_square.py.png)
 
@@ -37,4 +37,4 @@ This example uses the 'flight_idioms' tools to construct a behaviour tree in a s
 
 * each mission phase depends on a specific battery level
 
-![Behaviour tree](https://raw.githubusercontent.com/UoBFlightLab/drone_trees/master/examples/bridge/cusersaeagronedrive_-_university_of_bristoldocumentspythondrone_treesexamplesbridgefly_bridge.py.png)
+![Behaviour tree](https://raw.githubusercontent.com/UoBFlightLab/drone_trees/master/examples/bridge/fly_bridge.py.png)

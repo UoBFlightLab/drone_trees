@@ -1,6 +1,27 @@
+# -*- coding: utf-8 -*-
+###############################################################################
+# License: MIT License
+#    https://raw.githubusercontent.com/UoBFlightLab/drone_trees/master/LICENSE
+###############################################################################
+# Author: Hirad Goudarzi
+# Role: PhD Candidate
+# Organisation: University of Bristol
+# Version: 2.0.0
+# Email: hirad.goudarzi@bristol.ac.uk
+###############################################################################
+"""
+
+leaf_node.py:
+
+Low-level leaf nodes representing drone actions and conditions.  The designer
+can use these in their flight idioms or to directly populate their tree
+templates.
+
+"""
+###############################################################################
+
 import py_trees
 import math
-import os
 from dronekit import VehicleMode, LocationGlobal, LocationGlobalRelative
 
 
@@ -42,32 +63,52 @@ class MissionUpload(py_trees.behaviour.Behaviour):
             for wp in self._wplist:
                 cmds.add(wp)
             cmds.upload()
-            self.feedback_message = 'Uploaded {} WPs'.format(cmds.count)
+            self.feedback_message = f'Uploaded {cmds.count} WPs'
             return py_trees.common.Status.SUCCESS
 
-# class MissionVerify(py_trees.behaviour.Behaviour):
 
-#     def __init__(self, vehicle, wplist):
-#         super(MissionVerify, self).__init__('Mission Verify')
-#         self._vehicle = vehicle
-#         self._wplist = wplist[:]
+class MissionVerify(py_trees.behaviour.Behaviour):
+    """
+    Leaf node for verifying mission upload by checking the Mission
+    Acknowledmnet message (link below) and having a non-zero waypoint.
+        FAILURE: No mission detected onboard
+        RUNNING: Mission detected but no acknowledment
+        SUCCESS: Mission detected and acknowledged
 
-#     def initialise(self):
-#         self._vehicle.commands.clear()
-#         self._vehicle.commands.download()
+    https://mavlink.io/en/messages/common.html#MISSION_ACK
+    https://mavlink.io/en/messages/common.html#MAV_MISSION_RESULT
 
-#     def update(self):
-#         if self._vehicle.commands.count < len(self._wplist):
-#             self.feedback_message = ('Got {} of {} WPs'
-#                                      .format(self._vehicle.commands.count,
-#                                              len(self._wplist)))
-#             return py_trees.common.Status.RUNNING
-#         else:
-#             cmd_list = [cmd for cmd in self._vehicle.commands]
-#             if cmd_list[1:]==self._wplist[:]:
-#                 return py_trees.common.Status.SUCCESS
-#             else:
-#                 return py_trees.common.Status.FAILURE
+    Parameters
+    ----------
+    vehicle : dronekit.Vehicle
+        The MAVLINK interface
+
+    Returns
+    -------
+    node : py_trees.common.Status
+        Status of the leaf node behaviour
+
+    """
+    def __init__(self, vehicle):
+        super(MissionVerify, self).__init__('Mission Verify')
+        self._vehicle = vehicle
+
+    def initialise(self):
+        self._vehicle.commands.download()
+
+    def update(self):
+        if self._vehicle.commands.count < 1:
+            self.feedback_message = 'No mission detected'
+            return py_trees.common.Status.FAILURE
+        else:
+            if self._vehicle.mission_ack_type is None:
+                self.feedback_message = 'Mission acknowledgement not received'
+                return py_trees.common.Status.RUNNING
+            # mission_ack_type of 0 means mission accepted
+            # https://mavlink.io/en/messages/common.html#MAV_MISSION_ACCEPTED
+            elif self._vehicle.mission_ack_type == 0:
+                self.feedback_message = 'MAV misssion accepted'
+                return py_trees.common.Status.SUCCESS
 
 
 class SetParam(py_trees.behaviour.Behaviour):
@@ -109,7 +150,7 @@ class SetParam(py_trees.behaviour.Behaviour):
 
 class Land(py_trees.behaviour.Behaviour):
     """
-    Action leaf node: switches flight mode to Return-to-Land and returns
+    Action leaf node: switches flight mode to Return-to-Launch and returns
     SUCCESS
     Parameters
     ----------
@@ -163,7 +204,7 @@ class CheckGPS(py_trees.behaviour.Behaviour):
     """
 
     def __init__(self, vehicle, fixType):
-        super(CheckGPS, self).__init__("GPS Status Check > %i?" % fixType)
+        super(CheckGPS, self).__init__(f"GPS Status Check > {fixType} ?")
         self._vehicle = vehicle
         self._fixType = fixType
 
@@ -203,16 +244,16 @@ class CheckDistance(py_trees.behaviour.Behaviour):
 
     """
     def __init__(self, vehicle, sensor_id, clearance):
-        super(CheckDistance, self).__init__("Distance {} > {} ?".format(sensor_id, clearance))
-        self._vehicle = vehicle
-        self._sensor_id = sensor_id
+        super(CheckDistance, self).__init__(
+            "Distance {} > {} ?".format(sensor_id, clearance))
+        self._veh = vehicle
+        self._id = sensor_id
         self._clearance = clearance
 
     def update(self):
-        current_dist = self._vehicle.distance_sensors[self._sensor_id].current_distance
+        current_dist = self._veh.distance_sensors[self._id].current_distance
         if current_dist is None:
-            self.feedback_message = ('Nothing from sensor {}'
-                                     .format(self._sensor_id))
+            self.feedback_message = ('Nothing from sensor {}'.format(self._id))
             return py_trees.common.Status.FAILURE
         elif current_dist/100. > self._clearance:
             self.feedback_message = 'Yes, it''s {}'.format(current_dist/100.)
@@ -241,7 +282,7 @@ class CheckEKF(py_trees.behaviour.Behaviour):
 
     """
     def __init__(self, vehicle):
-        super(CheckEKF, self).__init__("EKF healthy?")
+        super(CheckEKF, self).__init__("EKF healthy ?")
         self._vehicle = vehicle
 
     def update(self):
@@ -274,7 +315,7 @@ class CheckCounter(py_trees.behaviour.Behaviour):
 
     """
     def __init__(self, vehicle, wpn):
-        super(CheckCounter, self).__init__("Is Counter {}?".format(wpn))
+        super(CheckCounter, self).__init__(f"Is Counter {wpn}?")
         self._vehicle = vehicle
         self._wpn = wpn
 
@@ -284,7 +325,7 @@ class CheckCounter(py_trees.behaviour.Behaviour):
             self.feedback_message = 'Yes'
             return py_trees.common.Status.SUCCESS
         else:
-            self.feedback_message = 'No, it''s {}'.format(next_wp)
+            self.feedback_message = f"No, it's {next_wp}"
             return py_trees.common.Status.FAILURE
 
 
@@ -309,32 +350,57 @@ class CheckCounterLessThan(py_trees.behaviour.Behaviour):
 
     """
     def __init__(self, vehicle, wpn):
-        super(CheckCounterLessThan, self).__init__("Check Counter < %i" % wpn)
+        super(CheckCounterLessThan, self).__init__(f"Check Counter < {wpn}")
         self._vehicle = vehicle
         self._wpn = wpn
 
     def update(self):
         next_wp = self._vehicle.commands.next
         if next_wp < self._wpn:
-            self.feedback_message = 'Yes, it''s {}.'.format(next_wp)
+            self.feedback_message = f"Yes, it's {next_wp}."
             return py_trees.common.Status.SUCCESS
         else:
-            self.feedback_message = 'No, it''s {}.'.format(next_wp)
+            self.feedback_message = f"No, it's {next_wp}."
             return py_trees.common.Status.FAILURE
 
 
-class CheckLanding(py_trees.behaviour.Behaviour):
+class WaitForWaypoint(py_trees.behaviour.Behaviour):
+    """
+    Condition leaf node to wait for arrival at specified waypoint:
+        RUNNING: WP index matches the entry, the drone is flying towards WP
+        SUCCESS: WP reached matches the entry, the drone is at the specified WP
+        FAILURE: Otherwise
 
-    def __init__(self, vehicle):
-        super(CheckLanding, self).__init__("Check Landing")
+    Parameters
+    ----------
+    vehicle : dronekit.Vehicle
+        The MAVLINK interface
+
+    wpn : int
+        The index of the waypoint in question.
+
+    Returns
+    -------
+    node : py_trees.common.Status
+        Status of the leaf node behaviour
+
+    """
+    def __init__(self, vehicle, wpn):
+        super(WaitForWaypoint, self).__init__("Is vehicle at\n"
+                                              f"waypoint {wpn} ?")
         self._vehicle = vehicle
-        self._cmds = self._vehicle.commands
-        self._cmds.download()
+        self._wpn = wpn
 
     def update(self):
-        if self._cmds.count > 1 and self._cmds.next == self._cmds.count:
+        next_wp = self._vehicle.commands.next
+        if self._wpn == next_wp:
+            self.feedback_message = 'Flying towards it'
+            return py_trees.common.Status.RUNNING
+        elif self._vehicle.mission_item_reached == self._wpn:
+            self.feedback_message = f'Yes, reached waypoint {self._wpn}'
             return py_trees.common.Status.SUCCESS
         else:
+            self.feedback_message = f"No, it's {next_wp}"
             return py_trees.common.Status.FAILURE
 
 
@@ -376,6 +442,33 @@ class SetCounter(py_trees.behaviour.Behaviour):
             self.feedback_message = 'Cannot move WP counter backwards from '\
                                     '{} to {}'.format(cur_wpn, self._wpn)
             return py_trees.common.Status.FAILURE
+
+
+class TriggerCamera(py_trees.behaviour.Behaviour):
+    """
+    Action leaf node that takes a picture using the DO_DIGICAM_CONTROL command
+    and returns SUCCESS. Note that camera must be setup according to following:
+    https://ardupilot.org/copter/docs/common-cameras-and-gimbals.html
+
+    Parameters
+    ----------
+    vehicle : dronekit.Vehicle
+        The MAVLINK interface
+
+    Returns
+    -------
+    node : py_trees.common.Status
+        Status of the leaf node behaviour
+
+    """
+    def __init__(self, vehicle):
+        super(TriggerCamera, self).__init__("Trigger Camera")
+        self._vehicle = vehicle
+
+    def update(self):
+        self._vehicle.message_factory.digicam_control_send(0, 0, 0, 0, 0, 0, 1,
+                                                           0, 0, 0)
+        return py_trees.common.Status.SUCCESS
 
 
 class CheckMode(py_trees.behaviour.Behaviour):
@@ -477,7 +570,7 @@ class IsArmable(py_trees.behaviour.Behaviour):
 
     """
     def __init__(self, vehicle):
-        super(IsArmable, self).__init__('Can drone be armed?')
+        super(IsArmable, self).__init__('Can drone be armed ?')
         self._vehicle = vehicle
 
     def update(self):
@@ -507,7 +600,7 @@ class IsArmed(py_trees.behaviour.Behaviour):
 
     """
     def __init__(self, vehicle):
-        super(IsArmed, self).__init__('Is drone armed?')
+        super(IsArmed, self).__init__('Is drone armed ?')
         self._vehicle = vehicle
 
     def update(self):
@@ -555,35 +648,35 @@ class SimpleTakeoff(py_trees.behaviour.Behaviour):
 
     """
     def __init__(self, vehicle, altitude):
-        super(SimpleTakeoff, self).__init__("Take off %i" % altitude)
+        super(SimpleTakeoff, self).__init__(f'Take off {altitude}')
         self._vehicle = vehicle
         self._altitude = altitude
 
     def update(self):
         self._vehicle.simple_takeoff(self._altitude)
-        self.feedback_message = 'Takeoff and hold {}'.format(self._altitude)
+        self.feedback_message = f'Takeoff and hold {self._altitude}'
         return py_trees.common.Status.SUCCESS
 
 
-class PlaySound(py_trees.behaviour.Behaviour):
-
-    def __init__(self, msg, voiceAst, returnFailure=None):
-        super(PlaySound, self).__init__("Play sound %s" % msg)
-        self._msg = msg
-        self._voiceAst = voiceAst
-        self._returnFailure = returnFailure
-
-    def update(self):
-        print("[WarningSound::update] Adding: \"" + self._msg + "\"")
-        # Adding message to the Voice Assistant queue
-        if self._voiceAst:
-            self._voiceAst.add_say(self._msg)
-        else:
-            print("Muted")
-        if self._returnFailure:
-            return py_trees.common.Status.FAILURE
-        else:
-            return py_trees.common.Status.SUCCESS
+#class PlaySound(py_trees.behaviour.Behaviour):
+#
+#    def __init__(self, msg, voiceAst, returnFailure=None):
+#        super(PlaySound, self).__init__("Play sound %s" % msg)
+#        self._msg = msg
+#        self._voiceAst = voiceAst
+#        self._returnFailure = returnFailure
+#
+#    def update(self):
+#        print("[WarningSound::update] Adding: \"" + self._msg + "\"")
+#        # Adding message to the Voice Assistant queue
+#        if self._voiceAst:
+#            self._voiceAst.add_say(self._msg)
+#        else:
+#            print("Muted")
+#        if self._returnFailure:
+#            return py_trees.common.Status.FAILURE
+#        else:
+#            return py_trees.common.Status.SUCCESS
 
 
 class AltGlobalAbove(py_trees.behaviour.Behaviour):
@@ -608,7 +701,7 @@ class AltGlobalAbove(py_trees.behaviour.Behaviour):
 
     """
     def __init__(self, vehicle, altitude):
-        super(AltGlobalAbove, self).__init__("Over %f (global)" % altitude)
+        super(AltGlobalAbove, self).__init__(f'Over {altitude} (global)')
         self._vehicle = vehicle
         self._altitude = altitude
 
@@ -642,7 +735,7 @@ class AltLocalAbove(py_trees.behaviour.Behaviour):
 
     """
     def __init__(self, vehicle, altitude):
-        super(AltLocalAbove, self).__init__("Over %f (local)" % altitude)
+        super(AltLocalAbove, self).__init__(f'Over {altitude} (local)')
         self._vehicle = vehicle
         self._altitude = altitude
 
@@ -781,7 +874,7 @@ class LatSpeedUnder(py_trees.behaviour.Behaviour):
 
     """
     def __init__(self, vehicle, max_speed):
-        super(LatSpeedUnder, self).__init__("Lat speed < {}?".format(max_speed))
+        super(LatSpeedUnder, self).__init__(f"Lat speed < {max_speed}?")
         self._vehicle = vehicle
         self._max_speed = max_speed
 
@@ -789,31 +882,45 @@ class LatSpeedUnder(py_trees.behaviour.Behaviour):
         (vx, vy, vz) = self._vehicle.velocity
         current_speed = math.sqrt(vx*vx + vy*vy)
         if current_speed < self._max_speed:
-            self.feedback_message = 'Yes, speed is {}'.format(current_speed)
+            self.feedback_message = f'Yes, speed is {current_speed}'
             return py_trees.common.Status.SUCCESS
         else:
-            self.feedback_message = 'No, speed is {}'.format(current_speed)
+            self.feedback_message = f'No, speed is {current_speed}'
             return py_trees.common.Status.FAILURE
 
 
-class log:
-    def __init__(self, root, path):
-        super(log, self).__init__()
-        self._root = root
-        self._path = path
+class CheckRCSwitch(py_trees.behaviour.Behaviour):
+    """
+    Condition leaf node that checks the status of a momentary switch
+    (i.e. push switch)
+        SUCCESS: The switch is on (activated or pushed)
+        FAILURE: The switch is off or no data available
 
-        # Make HTML file for the html log
-        self._bt_log_path = os.path.join(self._path, 'BT')
-        self._filename = os.path.join(self._bt_log_path, 'bt_log.html')
-        self._f = open(self._filename, 'w')
-        self._f.write('<html><head><title>Foo</title><body>')
+    Parameters
+    ----------
+    vehicle : dronekit.Vehicle
+        The MAVLINK interface
 
-    def logging(self, iteration, dot=False):
-        self._f.write("<p>******************** %i ********************</p>" % iteration)
-        self._f.write(py_trees.display.xhtml_tree(self._root, show_status=True))
-        if dot:
-            py_trees.display.render_dot_tree(self._root, name='tick_%i' % iteration, target_directory=self._bt_log_path)
+    channel : The channel allocated to the switch
 
-    def terminate(self):
-        self._f.write("</body></html>")
-        self._f.close()
+    on_pwm_limit : The PWM limit in which the switch is considered ON in µs
+
+    Returns
+    -------
+    node : py_trees.common.Status
+        Status of the leaf node behaviour
+
+    """
+    def __init__(self, vehicle, channel, on_pwm_limit):
+        super(CheckRCSwitch, self).__init__("Is Switch ON ?")
+        self._vehicle = vehicle
+        self._channel = channel
+        self._on = on_pwm_limit
+
+    def update(self):
+        if self._vehicle.rc_channels.chan_raw[self._channel] > self._on:
+            self.feedback_message = "Yes, it's ON ___"
+            return py_trees.common.Status.SUCCESS
+        else:
+            self.feedback_message = "No, it's OFF _/ _"
+            return py_trees.common.Status.FAILURE
