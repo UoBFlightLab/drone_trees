@@ -8,4 +8,5 @@ setup(name='drone_trees',
       author_email='flightlab@example.com',
       license='MIT',
       packages=['drone_trees'],
+      install_requires=['dronekit','dronekit_sitl','py_trees','wheel']
       zip_safe=False)

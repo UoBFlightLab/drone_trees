@@ -6,6 +6,7 @@ terrain/**
 *.pyc
 venv/*
 .vscode/**
+.vs/**
 seg1.txt
 seg2.txt
 test.py

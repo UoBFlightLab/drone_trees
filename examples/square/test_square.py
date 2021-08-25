@@ -25,7 +25,11 @@ def test_nominal():
         sleep(1)
     # should be on the ground
     assert ca.vehicle.location.global_relative_frame.alt < 0.2
-    ca.vehicle.mode = VehicleMode('GUIDED')   
+    ca.vehicle.mode = VehicleMode('GUIDED')
+    sleep(1) 
+    ca.vehicle.mode = VehicleMode('GUIDED')
+    sleep(1) 
+    ca.vehicle.mode = VehicleMode('GUIDED')
     for ii in range(10):
         ca.tick()
         sleep(1)
