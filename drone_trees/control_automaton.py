@@ -199,7 +199,11 @@ class ControlAutomaton:
                                previously_visited=self._snapshot_visitor.visited))
             print("+++++++++++++++++++++")
         print(self.vehicle.battery)
-        print(f'Mode: {self.vehicle.mode.name}')
+        if self.vehicle.armed:
+            arm_status = 'ARMED'
+        else:
+            arm_status = 'DISARMED'
+        print(f'Mode: {self.vehicle.mode.name} {arm_status}')
         print(f'Altitude: {self.vehicle.location.global_relative_frame.alt}')
         print(f'Connected to {self._connection_string}')
         print(f'Next waypoint is {self.vehicle.commands.next}')

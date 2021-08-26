@@ -1,8 +1,22 @@
 import platform
+import os
 from time import sleep
 from dronekit_sitl import SITL
 from dronekit import connect, VehicleMode
 from drone_trees.drone_tree_vehicle import DroneTreeVehicle
+
+def sitl_file_path():
+    """Return the fully qualified path to a local
+    SITL executable shipped with the software for testing"""
+    sitl_base_path = os.path.dirname(os.path.abspath(__file__))
+    if platform.system()=='Linux':
+        sitl_path=os.path.join(sitl_base_path,'../sitl/linux/arducopter')
+    elif platform.system()=='Windows':
+        sitl_path=os.path.join(sitl_base_path,'../sitl/windows/ArduCopter.exe')
+    else:
+        print('No executable suitable for testing on platform {}'.format(platform.system()))
+        sitl_path=None
+    return(sitl_path)
 
 def start_sitl():
     """Launch a SITL using local copy of Copter 4,
@@ -10,12 +24,7 @@ def start_sitl():
     Only works for Windows or Linux.  Including
     binary in the project is ugly, but only used
     for testing."""
-    if platform.system()=='Linux':
-        sitl_path='../sitl/linux/arducopter'
-    elif platform.system()=='Windows':
-        sitl_path='../sitl/windows/ArduCopter.exe'
-    else:
-        sitl_path=''
+    sitl_path = sitl_file_path()
     sitl = SITL(sitl_path)
     sitl.launch(['--home=51.454531,-2.629158,589,353'])
 
