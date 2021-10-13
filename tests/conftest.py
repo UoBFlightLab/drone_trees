@@ -24,8 +24,8 @@ Ardupilot SITL instances in the following states:
 ###############################################################################
 
 import pytest
-import os
 import sys
+from os.path import join, abspath
 from time import sleep
 from dronekit_sitl import SITL
 from dronekit import connect, VehicleMode
@@ -203,8 +203,8 @@ def copter_sitl_auto_to():
 
     # upload an arbitrary mission
     mission = MAVWPLoader()
-    mission_filename = os.path.join(sitl_path, 'executable_mission.txt')
-    mission.load(mission_filename)
+    filename = join(abspath(sys.path[0]), 'executable_mission.txt')
+    mission.load(filename)
     # bit of a hack: fix the sequence number
     for w in mission.wpoints:
         w.seq = w.seq+1

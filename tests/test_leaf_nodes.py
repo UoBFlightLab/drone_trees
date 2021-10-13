@@ -608,8 +608,7 @@ def test_MissionUpload(copter_sitl_ground):
     # load an arbitrary mission mission file
     from pymavlink.mavwp import MAVWPLoader
     mission = MAVWPLoader()
-    sitl_path = join(abspath(sys.path[0]), '..', 'examples', 'bridge')
-    mission_filename = join(sitl_path, 'executable_mission.txt')
+    mission_filename = join(abspath(sys.path[0]), 'executable_mission.txt')
     mission.load(mission_filename)
     # bit of a hack: fix the sequence number
     for w in mission.wpoints:
